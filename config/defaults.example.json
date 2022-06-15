@@ -1,0 +1,32 @@
+{
+  "subject": {
+    "email": {
+      "prompt": "Email address for certificate administrator",
+      "shortName": "E",
+      "default": "something@example.com"
+    },
+    "organization": {
+      "prompt": "Organization or company name",
+      "shortName": "O",
+      "default": "Example Home Lab Industries INC."
+    },
+    "locality": {
+      "prompt": "City or Locality",
+      "shortName": "L",
+      "default": "New York"
+    },
+    "state": {
+      "prompt": "State or Region",
+      "shortName": "ST",
+      "default": "New York"
+    },
+    "country": {
+      "prompt": "Country code (eg. US)",
+      "shortName": "C",
+      "default": "US"
+    }
+  },
+  "validDomains": [
+    "example.com"
+  ]
+}
