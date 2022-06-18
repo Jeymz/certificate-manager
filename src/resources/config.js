@@ -1,4 +1,5 @@
 const path = require('path');
+const forge = require('node-forge');
 const fs = require('fs');
 const Validator = require('./validator');
 
@@ -22,6 +23,7 @@ class Config {
     Object.keys(this.#private.configuration.subject).forEach((key) => {
       this.#private.subjectDefaults.push({
         shortName: this.#private.configuration.subject[key].shortName,
+        valueTagClass: forge.asn1.Type.UTF8,
         value: this.#private.configuration.subject[key].default
       });
     });

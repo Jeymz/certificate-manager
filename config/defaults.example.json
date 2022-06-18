@@ -32,5 +32,37 @@
   },
   "validDomains": [
     "example.com"
-  ]
+  ],
+  "extensions": {
+    "CA": [
+      {
+        "name": "basicContraints",
+        "cA": true
+      },
+      {
+        "name": "keyUsage",
+        "digitalSignature": true,
+        "nonRepudiation": true,
+        "keyEncipherment": true,
+        "dataEncipherment": true,
+        "keyCertSign": true
+      }
+    ],
+    "webServer": [
+      {
+        "name": "basicConstraints",
+        "cA": false
+      },
+      {
+        "name": "keyUsage",
+        "digitalSignature": true,
+        "nonRepudiation": true,
+        "keyEncipherment": true
+      },
+      {
+        "name": "extKeyUsage",
+        "serverAuth": true
+      }
+    ]
+  }  
 }
