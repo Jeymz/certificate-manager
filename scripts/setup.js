@@ -82,13 +82,13 @@ function createCA() {
   if (!fs.existsSync(path.join(config.getStoreDirectory(), 'newCerts'))) {
     fs.mkdirSync(path.join(config.getStoreDirectory(), 'newCerts'));
   }
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'private', 'ca.key.pem'), keypair.privateKey, 'utf-8');
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'public', 'ca.pubkey.pem'), keypair.publicKey, 'utf-8');
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'certs', 'ca.cert.crt'), pem.certificate, 'utf-8');
+  fs.writeFileSync(path.join(config.getStoreDirectory(), 'private', 'ca.key.pem'), keypair.privateKey, { encoding: 'utf-8' });
+  fs.writeFileSync(path.join(config.getStoreDirectory(), 'public', 'ca.pubkey.pem'), keypair.publicKey, { encoding: 'utf-8' });
+  fs.writeFileSync(path.join(config.getStoreDirectory(), 'certs', 'ca.cert.crt'), pem.certificate, { encoding: 'utf-8' });
   fs.writeFileSync(path.join(config.getStoreDirectory(), 'log.json'), JSON.stringify({
     requests: []
-  }), 'utf-8');
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'serial'), '1000000', 'utf-8');
+  }), { encoding: 'utf-8' });
+  fs.writeFileSync(path.join(config.getStoreDirectory(), 'serial'), '1000000', { encoding: 'utf-8' });
   console.log('Certificate created.');
 }
 

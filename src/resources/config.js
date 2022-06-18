@@ -42,7 +42,7 @@ class Config {
   }
 
   getSubject() {
-    return this.#private.subjectDefaults;
+    return JSON.parse(JSON.stringify(this.#private.subjectDefaults));
   }
 
   getStoreDirectory() {
@@ -54,15 +54,15 @@ class Config {
   }
 
   isInitialized() {
-    return this.#private.initialized;
+    return this.#private.initialized.toString();
   }
 
   getServerConfig() {
-    return this.#private.configuration.server;
+    return JSON.parse(JSON.stringify(this.#private.configuration.server));
   }
 
   getCertExtensions() {
-    return this.#private.configuration.extensions;
+    return JSON.parse(JSON.stringify(this.#private.configuration.extensions));
   }
 
 }

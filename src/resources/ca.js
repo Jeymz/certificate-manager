@@ -85,17 +85,17 @@ module.exports = class CA {
     fs.writeFileSync(
       certPath,
       forge.pki.certificateToPem(newCert),
-      'utf-8'
+      { encoding: 'utf-8' }
     );
     fs.writeFileSync(
       csrPath,
       CSR.getCSR(),
-      'utf-8'
+      { encoding: 'utf-8' }
     );
     fs.writeFileSync(
       privateKeyPath,
       CSR.getPrivateKey(),
-      'utf-8'
+      { encoding: 'utf-8' }
     );
     // console.log(newCert);
     this.updateLog(csrPath, certPath, privateKeyPath, expiration, CSR.getHostname());
@@ -105,7 +105,7 @@ module.exports = class CA {
   updateLog(csrPath, certPath, privateKeyPath, expiration, hostname) {
     const log = JSON.parse(fs.readFileSync(
       this.#private.store.log,
-      'utf-8'
+      { encoding: 'utf-8' }
     ));
     log.requests.push({
       request: csrPath,
@@ -117,7 +117,7 @@ module.exports = class CA {
     fs.writeFileSync(
       this.#private.store.log,
       JSON.stringify(log),
-      'utf-8'
+      { encoding: 'utf-8' }
     );
   }
 };
