@@ -2,6 +2,7 @@
   "server": {
     "port": 3000
   },
+  "storeDirectory": "./files",
   "subject": {
     "email": {
       "prompt": "Email address for certificate administrator",

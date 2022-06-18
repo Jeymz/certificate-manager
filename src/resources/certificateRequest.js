@@ -34,6 +34,7 @@ module.exports = class request {
       }
     ];
     this.#private.hostname = hostname.toString().toLowerCase();
+    this.#private.certType = 'webServer';
   }
 
   addAltNames(altNames) {
@@ -75,5 +76,18 @@ module.exports = class request {
 
   getPrivateKey() {
     return forge.pki.privateKeyToPem(this.#private.keypair.privateKey);
+  }
+
+  setCertType(certType) {
+    const certConfigs = config.getCertExtensions();
+    if (Object.keys(certConfigs).indexOf(certType.toString()) < 0) {
+      throw new Error('Invalid or unsupported cert type provided');
+    } else {
+      this.#private.certType = certConfigs[Object.keys(certConfigs).indexOf(certType.toString())];
+    }
+  }
+
+  getCertType() {
+    return this.#private.certType;
   }
 };

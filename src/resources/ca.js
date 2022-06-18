@@ -65,20 +65,8 @@ module.exports = class CA {
     newCert.validity.notBefore = new Date();
     newCert.validity.notAfter = expiration;
     newCert.setSubject(csr.subject.attributes);
-    const extensions = [
-      {
-        name: 'basicConstraints',
-        cA: true
-      },
-      {
-        name: 'keyUsage',
-        keyCertSign: true,
-        digitalSignature: true,
-        nonRepudiation: true,
-        keyEncipherment: true,
-        dataEncipherment: true
-      }
-    ];
+    const extensionConfigs = config.getCertExtensions();
+    const extensions = extensionConfigs[CSR.getCertType()];
     if (csr.attributes.length === 3) {
       if (csr.attributes[csr.attributes.length - 1].name === 'extensionRequest') {
         csr.attributes[csr.attributes.length - 1].extensions.forEach((extensionRequest) => {
@@ -89,6 +77,7 @@ module.exports = class CA {
       }
     }
     newCert.setIssuer(caCert.subject.attributes);
+    console.log(extensions);
     newCert.setExtensions(extensions);
 
     newCert.publicKey = csr.publicKey;

@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "setup": "npm install --production && node scripts/setup.js",
-    "win": "node server.js"
+    "win": "nodemon server.js"
   },
   "author": "Robotti Tech Services",
   "license": "ISC",

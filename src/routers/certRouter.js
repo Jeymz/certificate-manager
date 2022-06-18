@@ -21,7 +21,7 @@ module.exports = () => {
         altNames,
         passphrase
       } = req.body;
-      const newCert = controller.newCertificateRequest(hostname, passphrase, altNames);
+      const newCert = controller.newWebServerCertificate(hostname, passphrase, altNames);
       return res.send(newCert);
     });
 

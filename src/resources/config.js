@@ -4,7 +4,6 @@ const Validator = require('./validator');
 
 const configurationFiles = {
   default: path.join(__dirname, '../', '../', 'config', 'defaults.json'),
-  storeDirectory: path.join(__dirname, '../', '../', 'files')
 };
 
 let config = false;
@@ -17,6 +16,8 @@ class Config {
     this.#private.configuration = JSON.parse(
       fs.readFileSync(configurationFiles.default, 'utf8')
     );
+    console.log(path.resolve('./files'))
+    configurationFiles.storeDirectory = path.resolve(this.#private.configuration.storeDirectory);
     this.#private.subjectDefaults = [];
     Object.keys(this.#private.configuration.subject).forEach((key) => {
       this.#private.subjectDefaults.push({
@@ -59,6 +60,11 @@ class Config {
   getServerConfig() {
     return this.#private.configuration.server;
   }
+
+  getCertExtensions() {
+    return this.#private.configuration.extensions;
+  }
+
 }
 
 module.exports = () => {

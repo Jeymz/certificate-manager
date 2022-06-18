@@ -55,7 +55,7 @@ function createCA() {
 
   // self-sign certificate
   cert.sign(keys.privateKey, forge.md.sha256.create());
-  console.log('Certificate created.');
+  
 
   // PEM-format keys and cert
   const pem = {
@@ -64,20 +64,32 @@ function createCA() {
     certificate: forge.pki.certificateToPem(cert)
   };
 
-  console.log('\nKey-Pair:');
-  console.log(pem.privateKey);
-  console.log(pem.publicKey);
-
-  console.log('\nCertificate:');
-  console.log(pem.certificate);
-
-  fs.writeFileSync(path.join(__dirname, '../', 'files', 'private', 'ca.key.pem'), keypair.privateKey, 'utf-8');
-  fs.writeFileSync(path.join(__dirname, '../', 'files', 'public', 'ca.pubkey.pem'), keypair.publicKey, 'utf-8');
-  fs.writeFileSync(path.join(__dirname, '../', 'files', 'certs', 'ca.cert.crt'), pem.certificate, 'utf-8');
-  fs.writeFileSync(path.join(__dirname, '../', 'files', 'log.json'), JSON.stringify({
+  if (!fs.existsSync(config.getStoreDirectory())) {
+    throw new Error('Invalid store directory provided');
+  }
+  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'private'))) {
+    fs.mkdirSync(path.join(config.getStoreDirectory(), 'private'));
+  }
+  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'public'))) {
+    fs.mkdirSync(path.join(config.getStoreDirectory(), 'public'));
+  }
+  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'certs'))) {
+    fs.mkdirSync(path.join(config.getStoreDirectory(), 'certs'));
+  }
+  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'requests'))) {
+    fs.mkdirSync(path.join(config.getStoreDirectory(), 'requests'));
+  }
+  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'newCerts'))) {
+    fs.mkdirSync(path.join(config.getStoreDirectory(), 'newCerts'));
+  }
+  fs.writeFileSync(path.join(config.getStoreDirectory(), 'private', 'ca.key.pem'), keypair.privateKey, 'utf-8');
+  fs.writeFileSync(path.join(config.getStoreDirectory(), 'public', 'ca.pubkey.pem'), keypair.publicKey, 'utf-8');
+  fs.writeFileSync(path.join(config.getStoreDirectory(), 'certs', 'ca.cert.crt'), pem.certificate, 'utf-8');
+  fs.writeFileSync(path.join(config.getStoreDirectory(), 'log.json'), JSON.stringify({
     requests: []
   }), 'utf-8');
-  fs.writeFileSync(path.join(__dirname, '../', 'files', 'serial'), '1000000', 'utf-8');
+  fs.writeFileSync(path.join(config.getStoreDirectory(), 'serial'), '1000000', 'utf-8');
+  console.log('Certificate created.');
 }
 
 if (Object.keys(process.env).indexOf('CAPASS') < 0 || typeof process.env.CAPASS !== 'string') {
