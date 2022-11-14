@@ -1,6 +1,6 @@
 const forge = require('node-forge');
 const crypto = require('crypto');
-const config = require('./config')();
+const config = require('./oldConfig')();
 
 module.exports = class request {
   #private = {};

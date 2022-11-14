@@ -1,34 +1,25 @@
 const jsonSchema = require('jsonschema');
-const schemas = require('./schemas');
+const schemas = require('./schemas/main');
 
-module.exports = class Validator {
+class Validator {
   #private = {};
 
-  constructor(configuration) {
-    this.#private.config = configuration;
+  constructor() {
     this.#private.Validator = jsonSchema.Validator;
     this.#private.schemas = schemas;
   }
 
-  hostname(hostname) {
-    if (hostname.indexOf('.') < 0) {
-      return false;
-    }
-    const hostnameParts = hostname.split('.');
-    if (hostnameParts.length < 3) {
-      return false;
-    }
-    if (this.#private.config.validDomains.indexOf(
-      `${hostnameParts[hostnameParts.length - 2]}.${hostnameParts[hostnameParts.length - 1]}`
-    ) < 0) {
-      return false;
-    }
-    return true;
-  }
-
   validateSchema(schemaName, data) {
+    if (Object.keys(this.#private.schemas).indexOf(schemaName) < 0) {
+      throw new Error('No matching schema found');
+    }
     const validator = new this.#private.Validator();
     const validationResults = validator.validate(data, this.#private.schemas[schemaName]);
+    console.log(validationResults);
     return validationResults.valid;
   }
-};
+}
+
+const validator = new Validator();
+
+module.exports = validator;

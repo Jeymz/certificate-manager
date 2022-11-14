@@ -2,9 +2,9 @@ const forge = require('node-forge');
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
-const config = require('../src/resources/config')();
+const { subjectAttributes, extensions, config } = require('../src/resources/main');
 
-function createCA() {
+function createRootCA(passphrase) {
   const options = {
     modulusLength: 4096,
     publicKeyEncoding: {
@@ -13,87 +13,43 @@ function createCA() {
     },
     privateKeyEncoding: {
       type: 'pkcs8',
-      format: 'pem'
+      format: 'pem',
+      cipher: 'aes-256-cbc',
+      passphrase
     }
   };
-  if (process.env.CAPASS) {
-    options.privateKeyEncoding.cipher = 'aes-256-cbc';
-    options.privateKeyEncoding.passphrase = process.env.CAPASS.toString().trim();
-  }
   const keypair = crypto.generateKeyPairSync('rsa', options);
   const keys = {
     privateKey: forge.pki.decryptRsaPrivateKey(
       keypair.privateKey,
-      process.env.CAPASS.toString().trim()
+      passphrase
     ),
     publicKey: forge.pki.publicKeyFromPem(keypair.publicKey)
   };
-  console.log('Key-pair created.');
-  console.log('Creating self-signed certificate...');
+  // Add some logging here
   const cert = forge.pki.createCertificate();
   cert.publicKey = keys.publicKey;
   cert.serialNumber = '1000000';
   cert.validity.notBefore = new Date();
   cert.validity.notAfter = new Date();
-  cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1);
-  const attrs = config.getSubject();
-  attrs.push({
+  cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 3);
+  const attributes = subjectAttributes();
+  const subjectConfig = config.get('certificate');
+  attributes.push({
     shortName: 'CN',
-    value: 'Robotti Tech Services - Root CA'
+    value: `${subjectConfig.organization} - ROOT CA`
   });
-  cert.setSubject(attrs);
-  cert.setIssuer(attrs);
+  cert.setSubject(attributes);
+  cert.setIssuer(attributes);
+  cert.setExtensions(extensions.rootCA);
 
-  cert.setExtensions([{
-    name: 'basicConstraints',
-    cA: true
-  }, {
-    name: 'subjectKeyIdentifier'
-  }, {
-    name: 'authorityKeyIdentifier'
-  }]);
-
-  // self-sign certificate
   cert.sign(keys.privateKey, forge.md.sha256.create());
-  
-
-  // PEM-format keys and cert
   const pem = {
     privateKey: forge.pki.privateKeyToPem(keys.privateKey),
     publicKey: forge.pki.publicKeyToPem(keys.publicKey),
     certificate: forge.pki.certificateToPem(cert)
   };
 
-  if (!fs.existsSync(config.getStoreDirectory())) {
-    throw new Error('Invalid store directory provided');
-  }
-  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'private'))) {
-    fs.mkdirSync(path.join(config.getStoreDirectory(), 'private'));
-  }
-  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'public'))) {
-    fs.mkdirSync(path.join(config.getStoreDirectory(), 'public'));
-  }
-  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'certs'))) {
-    fs.mkdirSync(path.join(config.getStoreDirectory(), 'certs'));
-  }
-  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'requests'))) {
-    fs.mkdirSync(path.join(config.getStoreDirectory(), 'requests'));
-  }
-  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'newCerts'))) {
-    fs.mkdirSync(path.join(config.getStoreDirectory(), 'newCerts'));
-  }
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'private', 'ca.key.pem'), keypair.privateKey, { encoding: 'utf-8' });
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'public', 'ca.pubkey.pem'), keypair.publicKey, { encoding: 'utf-8' });
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'certs', 'ca.cert.crt'), pem.certificate, { encoding: 'utf-8' });
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'log.json'), JSON.stringify({
-    requests: []
-  }), { encoding: 'utf-8' });
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'serial'), '1000000', { encoding: 'utf-8' });
-  console.log('Certificate created.');
-}
-
-if (Object.keys(process.env).indexOf('CAPASS') < 0 || typeof process.env.CAPASS !== 'string') {
-  console.log('Please set an environment variable called CAPASS before running setup');
-} else {
-  createCA();
+  const caConfig = config.get('ca');
+  
 }

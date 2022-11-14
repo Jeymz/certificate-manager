@@ -1,77 +1,128 @@
 const path = require('path');
-const forge = require('node-forge');
 const fs = require('fs');
-const Validator = require('./validator');
+const os = require('os');
+const validator = require('./validator');
 
-const configurationFiles = {
-  default: path.join(__dirname, '../', '../', 'config', 'defaults.json'),
-};
+const validEnvironments = [
+  'local-dev',
+  'development',
+  'staging',
+  'production',
+  'test'
+];
 
-let config = false;
-
-// TODO: Move CA methods to their own class.
 class Config {
-  #private = {};
+  #private = {
+    configDir: path.join(process.cwd(), 'config')
+  };
 
   constructor() {
-    this.#private.configuration = JSON.parse(
-      fs.readFileSync(configurationFiles.default, 'utf8')
-    );
-    console.log(path.resolve('./files'))
-    configurationFiles.storeDirectory = path.resolve(this.#private.configuration.storeDirectory);
-    this.#private.subjectDefaults = [];
-    Object.keys(this.#private.configuration.subject).forEach((key) => {
-      this.#private.subjectDefaults.push({
-        shortName: this.#private.configuration.subject[key].shortName,
-        valueTagClass: forge.asn1.Type.UTF8,
-        value: this.#private.configuration.subject[key].default
-      });
-    });
-    this.#private.storeDirectory = configurationFiles.storeDirectory;
-    this.#private.validator = new Validator(this.#private.configuration.validationConfig);
-    this.validateHostname = this.#private.validator.hostname;
-    if (
-      fs.existsSync(path.join(configurationFiles.storeDirectory, 'serial'))
-      && fs.existsSync(path.join(configurationFiles.storeDirectory, 'certs'))
-      && fs.existsSync(path.join(configurationFiles.storeDirectory, 'private'))
-      && fs.existsSync(path.join(configurationFiles.storeDirectory, 'certs', 'ca.cert.crt'))
-      && fs.existsSync(path.join(configurationFiles.storeDirectory, 'private', 'ca.key.pem'))
-    ) {
-      this.#private.initialized = true;
+    // Set the environment
+    if (!process.env?.NODE_ENV) {
+      this.#private.environment = 'default';
+    } else if (validEnvironments.indexOf(process.env.NODE_ENV.toLowerCase().trim()) < 0) {
+      this.#private.environment = 'default';
     } else {
-      this.#private.initialized = false;
+      this.#private.environment = process.env.NODE_ENV.toLowerCase().trim();
+    }
+
+    // Load configuration file check that it is valid json
+    const configFile = path.join(this.#private.configDir, `${this.#private.environment}.json`);
+    if (!fs.existsSync(configFile)) {
+      throw new Error(`Unable to locate configuration - ${configFile}`);
+    }
+    this.#private.configText = fs.readFileSync(configFile, 'utf8');
+    try {
+      this.#private.config = JSON.parse(this.#private.configText);
+    } catch (err) {
+      console.log(err);
+      throw new Error(`Invalid JSON provided in ${configFile}`);
+    }
+
+    // Perform configuration injections
+    if (fs.existsSync(path.join(process.cwd(), 'config', 'requiredSecrets.json'))) {
+      this.#injectSecrets();
+    }
+    this.#injectHelpers();
+
+    // Validate configuration
+    try {
+      this.#private.config = JSON.parse(this.#private.configText);
+    } catch (err) {
+      console.log(err);
+      throw new Error('Unable to parse JSON after injections');
+    }
+
+    if (!validator.validateSchema('config', this.#private.config)) {
+      throw new Error('Invalid configuration provided');
     }
   }
 
-  getSubject() {
-    return JSON.parse(JSON.stringify(this.#private.subjectDefaults));
+  #injectSecrets() {
+    try {
+      const requiredSecrets = JSON.parse(
+        fs.readFileSync(
+          path.join(
+            process.cwd(),
+            'config',
+            'requiredSecrets.json'
+          ),
+          'utf8'
+        )
+      );
+      let providedSecrets = process.env;
+      if (fs.existsSync(path.join(this.#private.configDir, `${this.#private.environment}.secrets.json`))) {
+        providedSecrets = JSON.parse(
+          fs.readFileSync(
+            path.join(
+              this.#private.configDir,
+              `${this.#private.environment}.secrets.json`
+            ),
+            'utf8'
+          )
+        );
+      }
+      Object.keys(requiredSecrets).forEach((key) => {
+        if (Object.keys(providedSecrets).indexOf(key) < 0) {
+          throw new Error(`Missing ${key} secret`);
+        }
+        this.#private.configText = this.#private.configText.replaceAll(
+          `{{${key}}}`,
+          providedSecrets[key].toString()
+        );
+        if (Object.keys(process.env).indexOf(key) > -1) {
+          delete process.env[key];
+        }
+      });
+    } catch (err) {
+      console.log(err);
+      throw new Error('Unable to inject secrets');
+    }
   }
 
-  getStoreDirectory() {
-    return this.#private.storeDirectory;
+  #injectHelpers() {
+    this.#private.configText = this.#private.configText.replaceAll('{{CWD}}', process.cwd().toString().replaceAll('\\', '\\\\'));
+    this.#private.configText = this.#private.configText.replaceAll('{{HOSTNAME}}', os.hostname().toString());
+    this.#private.configText = this.#private.configText.replaceAll('{{DATETIME}}', new Date().getTime());
   }
 
-  getValidator() {
-    return new Validator(this.#private.configuration.validationConfig);
+  get(objectName) {
+    if (Object.keys(this.#private.config).indexOf(objectName.toString()) < 0) {
+      throw new Error('Invalid configuration object');
+    }
+    return JSON.parse(JSON.stringify(this.#private.config[objectName.toString()]));
   }
 
-  isInitialized() {
-    return this.#private.initialized.toString();
+  getOnce(objectName) {
+    if (Object.keys(this.#private.config).indexOf(objectName.toString()) < 0) {
+      throw new Error('Invalid configuration object');
+    }
+    const configObject = JSON.parse(JSON.stringify(this.#private.config[objectName.toString()]));
+    delete this.#private.config[objectName];
+    return configObject;
   }
-
-  getServerConfig() {
-    return JSON.parse(JSON.stringify(this.#private.configuration.server));
-  }
-
-  getCertExtensions() {
-    return JSON.parse(JSON.stringify(this.#private.configuration.extensions));
-  }
-
 }
 
-module.exports = () => {
-  if (!config) {
-    config = new Config();
-  }
-  return config;
-};
+const config = new Config();
+
+module.exports = config;
