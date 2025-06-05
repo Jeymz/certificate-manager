@@ -1,5 +1,5 @@
-const forge = require('node-forge');
 const crypto = require('crypto');
+const forge = require('node-forge');
 const config = require('./config')();
 
 module.exports = class request {

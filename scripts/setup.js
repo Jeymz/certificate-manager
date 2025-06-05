@@ -1,8 +1,10 @@
-const forge = require('node-forge');
 const fs = require('fs');
 const crypto = require('crypto');
 const path = require('path');
+const forge = require('node-forge');
 const config = require('../src/resources/config')();
+
+const CA_VALIDITY_YEARS = process.env.CA_VALIDITY_YEARS || 5;
 
 function createCA() {
   const options = {
@@ -35,7 +37,7 @@ function createCA() {
   cert.serialNumber = '1000000';
   cert.validity.notBefore = new Date();
   cert.validity.notAfter = new Date();
-  cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + 1);
+  cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + CA_VALIDITY_YEARS);
   const attrs = config.getSubject();
   attrs.push({
     shortName: 'CN',
@@ -55,7 +57,6 @@ function createCA() {
 
   // self-sign certificate
   cert.sign(keys.privateKey, forge.md.sha256.create());
-  
 
   // PEM-format keys and cert
   const pem = {

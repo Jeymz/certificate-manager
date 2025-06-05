@@ -6,7 +6,7 @@ import { defineConfig, globalIgnores } from "eslint/config";
 import importPlugin from "eslint-plugin-import";
 
 export default defineConfig([
-  globalIgnores(["node_modules", "dist", "client", "package-lock.json"]),
+  globalIgnores(["node_modules", "files", "package-lock.json"]),
   {
     files: ["**/*.{js,mjs,cjs}"],
     plugins: {
