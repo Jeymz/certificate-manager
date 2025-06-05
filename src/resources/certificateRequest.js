@@ -83,7 +83,7 @@ module.exports = class request {
     if (Object.keys(certConfigs).indexOf(certType.toString()) < 0) {
       throw new Error('Invalid or unsupported cert type provided');
     } else {
-      this.#private.certType = certConfigs[Object.keys(certConfigs).indexOf(certType.toString())];
+      this.#private.certType = certType.toString();
     }
   }
 
