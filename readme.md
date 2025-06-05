@@ -66,7 +66,7 @@ npm run win
   "passphrase": "SecretPassphrase"
 }
 ```
-6. All your web certs will be saved to the directory specified in the config in the `newCerts` directory. Prviate keys are all in the `private` directory. Your Root CA cert is in the `certs` folder and will need to be applied to all machines as a Trusted Root Certificate
+6. All your web certs will be saved to the directory specified in the config in the `newCerts` directory. Private keys are all in the `private` directory. Your Root CA cert is in the `certs` folder and will need to be applied to all machines as a Trusted Root Certificate
 
 ## Roadmap / Features
 - Allow for creating intermediate CAs
