@@ -1,6 +1,6 @@
+const fs = require('fs');
 const path = require('path');
 const forge = require('node-forge');
-const fs = require('fs');
 const Validator = require('./validator');
 
 const configurationFiles = {
@@ -17,7 +17,7 @@ class Config {
     this.#private.configuration = JSON.parse(
       fs.readFileSync(configurationFiles.default, 'utf8')
     );
-    console.log(path.resolve('./files'))
+    console.log(path.resolve('./files'));
     configurationFiles.storeDirectory = path.resolve(this.#private.configuration.storeDirectory);
     this.#private.subjectDefaults = [];
     Object.keys(this.#private.configuration.subject).forEach((key) => {
@@ -28,7 +28,7 @@ class Config {
       });
     });
     this.#private.storeDirectory = configurationFiles.storeDirectory;
-    this.#private.validator = new Validator(this.#private.configuration.validationConfig);
+    this.#private.validator = new Validator(this.#private.configuration);
     this.validateHostname = this.#private.validator.hostname;
     if (
       fs.existsSync(path.join(configurationFiles.storeDirectory, 'serial'))
@@ -52,7 +52,7 @@ class Config {
   }
 
   getValidator() {
-    return new Validator(this.#private.configuration.validationConfig);
+    return new Validator(this.#private.configuration);
   }
 
   isInitialized() {

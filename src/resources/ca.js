@@ -1,6 +1,6 @@
-const forge = require('node-forge');
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
+const forge = require('node-forge');
 const config = require('./config')();
 
 module.exports = class CA {
