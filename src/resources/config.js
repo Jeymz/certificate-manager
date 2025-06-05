@@ -56,7 +56,7 @@ class Config {
   }
 
   isInitialized() {
-    return this.#private.initialized.toString();
+    return this.#private.initialized;
   }
 
   getServerConfig() {

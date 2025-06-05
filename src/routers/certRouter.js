@@ -27,7 +27,7 @@ module.exports = () => {
 
   router.route('/')
     .get((req, res) => {
-      if (config.isInitialized()) {
+      if (config.isInitialized() === true) {
         res.send('Ready');
       } else {
         res.send('Awaiting Setup');
