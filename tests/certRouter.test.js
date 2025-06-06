@@ -5,12 +5,12 @@ const controller = require('../src/controllers/certController');
 
 jest.mock('../src/controllers/certController');
 
-const mockConfig = {
+var mockConfig = {};
+jest.mock('../src/resources/config', () => jest.fn(() => mockConfig));
+Object.assign(mockConfig, {
   getValidator: jest.fn(() => ({ validateSchema: jest.fn(() => true) })),
   isInitialized: jest.fn(() => true)
-};
-
-jest.mock('../src/resources/config', () => jest.fn(() => mockConfig));
+});
 
 const routerFactory = require('../src/routers/certRouter');
 
@@ -34,7 +34,10 @@ describe('certRouter', () => {
   });
 
   test('post /new rejects invalid body', async () => {
-    const invalid = await request(app).post('/new').send('bad');
+    mockConfig.getValidator.mockReturnValueOnce({ validateSchema: jest.fn(() => false) });
+    const invalid = await request(app)
+      .post('/new')
+      .send({ invalid: true });
     expect(invalid.status).toBe(400);
   });
 });

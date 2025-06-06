@@ -16,10 +16,12 @@ jest.mock('node-forge', () => ({
   md: { sha256: { create: jest.fn() } }
 }));
 
-const fs = require('fs');
-const CA = require('../src/resources/ca');
+let fs;
+let CA;
 
 beforeEach(() => {
+  jest.resetModules();
+  fs = require('fs');
   fs.readFileSync.mockImplementation((file) => {
     if (file.includes('defaults.json')) {
       return JSON.stringify({
@@ -30,10 +32,17 @@ beforeEach(() => {
         extensions: { webServer: [] }
       });
     }
+    if (file.includes('serial')) {
+      return '1';
+    }
+    if (file.includes('log.json')) {
+      return JSON.stringify({ requests: [] });
+    }
     return 'dummy';
   });
   fs.writeFileSync.mockImplementation(() => {});
   fs.existsSync = jest.fn(() => false);
+  CA = require('../src/resources/ca');
 });
 
 describe('CA resource', () => {
@@ -53,7 +62,6 @@ describe('CA resource', () => {
 
   test('getSerial increments serial', () => {
     const ca = new CA();
-    fs.readFileSync.mockReturnValueOnce('1');
     const serial = ca.getSerial();
     expect(serial).toBe('2');
   });
