@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const forge = require('node-forge');
+const net = require('net');
 const config = require('./config')();
 
 module.exports = class request {
@@ -44,17 +45,27 @@ module.exports = class request {
       altNames: []
     };
     altNames.forEach((alternateName) => {
-      subjectAltName.altNames.push({
-        type: 2,
-        value: alternateName
+      const normalized = alternateName.toString().toLowerCase();
+      if (net.isIP(normalized)) {
+        subjectAltName.altNames.push({
+          type: 7,
+          ip: normalized
+        });
+      } else if (this.#private.validator.hostname(normalized)) {
+        subjectAltName.altNames.push({
+          type: 2,
+          value: normalized
+        });
+      }
+    });
+    if (subjectAltName.altNames.length > 0) {
+      this.#private.attributes.push({
+        name: 'extensionRequest',
+        extensions: [
+          subjectAltName
+        ]
       });
-    });
-    this.#private.attributes.push({
-      name: 'extensionRequest',
-      extensions: [
-        subjectAltName
-      ]
-    });
+    }
   }
 
   sign() {

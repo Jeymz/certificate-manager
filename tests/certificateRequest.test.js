@@ -57,4 +57,32 @@ describe('certificateRequest', () => {
     req.sign();
     expect(require('node-forge').__mockCsr.setAttributes).toHaveBeenCalled();
   });
+
+  test('invalid SAN entries are ignored', () => {
+    const forge = require('node-forge');
+    forge.__mockCsr.setAttributes.mockClear();
+    const req = new Request('foo.example.com');
+    req.addAltNames(['bar.bad.com', 'BAR.EXAMPLE.COM', 'foo.com']);
+    req.sign();
+    const attrs = forge.__mockCsr.setAttributes.mock.calls[0][0];
+    const ext = attrs.find((a) => a.name === 'extensionRequest');
+    expect(ext.extensions[0].altNames).toEqual([
+      { type: 2, value: 'bar.example.com' }
+    ]);
+  });
+
+  test('ip SAN entries are allowed', () => {
+    const forge = require('node-forge');
+    forge.__mockCsr.setAttributes.mockClear();
+    const req = new Request('foo.example.com');
+    req.addAltNames(['192.168.0.1', 'BAR.EXAMPLE.COM', '10.0.0.1']);
+    req.sign();
+    const attrs = forge.__mockCsr.setAttributes.mock.calls[0][0];
+    const ext = attrs.find((a) => a.name === 'extensionRequest');
+    expect(ext.extensions[0].altNames).toEqual([
+      { type: 7, ip: '192.168.0.1' },
+      { type: 2, value: 'bar.example.com' },
+      { type: 7, ip: '10.0.0.1' }
+    ]);
+  });
 });
