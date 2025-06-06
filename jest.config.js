@@ -1,6 +1,6 @@
 module.exports = {
   setupFiles: ['<rootDir>/tests/preSetup.js'],
-  setupFilesAfterEnv: ['<rootDir>/tests/testSetup.js'],
+  globalTeardown: '<rootDir>/tests/globalTeardown.js',
   coverageThreshold: {
     global: {
       branches: 75,
