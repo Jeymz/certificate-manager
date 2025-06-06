@@ -15,12 +15,13 @@ module.exports = class request {
     this.#private.csr.publicKey = forge.pki.publicKeyFromPem(this.#private.keypair.publicKey);
     const subject = config.getSubject();
     this.#private.validator = config.getValidator();
-    if (!this.#private.validator.hostname(hostname)) {
+    const normalized = hostname.toString().toLowerCase();
+    if (!this.#private.validator.hostname(normalized)) {
       throw new Error('Invalid hostname');
     }
     subject.push({
       shortName: 'CN',
-      value: hostname.toString().toLowerCase()
+      value: normalized
     });
     this.#private.csr.setSubject(subject);
     this.#private.attributes = [
@@ -33,7 +34,7 @@ module.exports = class request {
         value: 'Robotti Tech Services'
       }
     ];
-    this.#private.hostname = hostname.toString().toLowerCase();
+    this.#private.hostname = normalized;
     this.#private.certType = 'webServer';
   }
 

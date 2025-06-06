@@ -1,3 +1,5 @@
-files/*
-config/defaults.json
+files
+coverage
+config/*
+!config/defaults.example.json
 node_modules

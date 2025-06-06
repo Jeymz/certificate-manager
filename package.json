@@ -6,7 +6,8 @@
   "scripts": {
     "setup": "npm install --production && node scripts/setup.js",
     "win": "nodemon server.js",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "jest --coverage"
   },
   "author": "Robotti Tech Services",
   "license": "ISC",
@@ -24,6 +25,8 @@
     "eslint": "^9.27.0",
     "eslint-plugin-import": "^2.31.0",
     "globals": "^16.1.0",
-    "nodemon": "^3.1.10"
+    "nodemon": "^3.1.10",
+    "jest": "^29.6.0",
+    "supertest": "^6.3.3"
   }
 }
