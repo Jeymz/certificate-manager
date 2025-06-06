@@ -1,6 +1,6 @@
 const crypto = require('crypto');
-const forge = require('node-forge');
 const net = require('net');
+const forge = require('node-forge');
 const config = require('./config')();
 
 module.exports = class request {
@@ -10,7 +10,7 @@ module.exports = class request {
     const keypair = forge.pki.rsa.generateKeyPair(2048);
     this.#private.keypair = {
       publicKey: forge.pki.publicKeyToPem(keypair.publicKey),
-      privateKey: keypair.privateKey
+      privateKey: keypair.privateKey,
     };
     this.#private.csr = forge.pki.createCertificationRequest();
     this.#private.csr.publicKey = forge.pki.publicKeyFromPem(this.#private.keypair.publicKey);
@@ -22,18 +22,18 @@ module.exports = class request {
     }
     subject.push({
       shortName: 'CN',
-      value: normalized
+      value: normalized,
     });
     this.#private.csr.setSubject(subject);
     this.#private.attributes = [
       {
         name: 'challengePassword',
-        value: crypto.randomBytes(32).toString('base64')
+        value: crypto.randomBytes(32).toString('base64'),
       },
       {
         name: 'unstructuredName',
-        value: 'Robotti Tech Services'
-      }
+        value: 'Robotti Tech Services',
+      },
     ];
     this.#private.hostname = normalized;
     this.#private.certType = 'webServer';
@@ -42,19 +42,19 @@ module.exports = class request {
   addAltNames(altNames) {
     const subjectAltName = {
       name: 'subjectAltName',
-      altNames: []
+      altNames: [],
     };
     altNames.forEach((alternateName) => {
       const normalized = alternateName.toString().toLowerCase();
       if (net.isIP(normalized)) {
         subjectAltName.altNames.push({
           type: 7,
-          ip: normalized
+          ip: normalized,
         });
       } else if (this.#private.validator.hostname(normalized)) {
         subjectAltName.altNames.push({
           type: 2,
-          value: normalized
+          value: normalized,
         });
       }
     });
@@ -62,8 +62,8 @@ module.exports = class request {
       this.#private.attributes.push({
         name: 'extensionRequest',
         extensions: [
-          subjectAltName
-        ]
+          subjectAltName,
+        ],
       });
     }
   }

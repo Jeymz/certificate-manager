@@ -15,7 +15,7 @@ class Config {
 
   constructor() {
     this.#private.configuration = JSON.parse(
-      fs.readFileSync(configurationFiles.default, 'utf8')
+      fs.readFileSync(configurationFiles.default, 'utf8'),
     );
     console.log(path.resolve('./files'));
     configurationFiles.storeDirectory = path.resolve(this.#private.configuration.storeDirectory);
@@ -24,7 +24,7 @@ class Config {
       this.#private.subjectDefaults.push({
         shortName: this.#private.configuration.subject[key].shortName,
         valueTagClass: forge.asn1.Type.UTF8,
-        value: this.#private.configuration.subject[key].default
+        value: this.#private.configuration.subject[key].default,
       });
     });
     this.#private.storeDirectory = configurationFiles.storeDirectory;

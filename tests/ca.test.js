@@ -9,11 +9,11 @@ jest.mock('node-forge', () => ({
       sign: jest.fn(),
       setSubject: jest.fn(),
       setIssuer: jest.fn(),
-      validity: {}
+      validity: {},
     })),
-    certificateToPem: jest.fn(() => 'signedCert')
+    certificateToPem: jest.fn(() => 'signedCert'),
   },
-  md: { sha256: { create: jest.fn() } }
+  md: { sha256: { create: jest.fn() } },
 }));
 
 let fs;
@@ -29,7 +29,7 @@ beforeEach(() => {
         storeDirectory: './files',
         subject: {},
         validDomains: ['example.com'],
-        extensions: { webServer: [] }
+        extensions: { webServer: [] },
       });
     }
     if (file.includes('serial')) {

@@ -12,19 +12,19 @@ module.exports = class CA {
       certs: path.join(storeDirectory, 'newCerts'),
       requests: path.join(storeDirectory, 'requests'),
       root: storeDirectory,
-      log: path.join(storeDirectory, 'log.json')
+      log: path.join(storeDirectory, 'log.json'),
     };
     this.#private.serial = fs.readFileSync(
       path.join(this.#private.store.root, 'serial'),
-      'utf-8'
+      'utf-8',
     );
     this.#private.caCert = fs.readFileSync(
       path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
-      'utf-8'
+      'utf-8',
     );
     this.#private.lockedKey = fs.readFileSync(
       path.join(this.#private.store.root, 'private', 'ca.key.pem'),
-      'utf-8'
+      'utf-8',
     );
   }
 
@@ -33,7 +33,7 @@ module.exports = class CA {
     fs.writeFileSync(
       path.join(this.#private.store.root, 'serial'),
       this.#private.serial,
-      'utf-8'
+      'utf-8',
     );
     return this.#private.serial.toString();
   }
@@ -85,17 +85,17 @@ module.exports = class CA {
     fs.writeFileSync(
       certPath,
       forge.pki.certificateToPem(newCert),
-      { encoding: 'utf-8' }
+      { encoding: 'utf-8' },
     );
     fs.writeFileSync(
       csrPath,
       CSR.getCSR(),
-      { encoding: 'utf-8' }
+      { encoding: 'utf-8' },
     );
     fs.writeFileSync(
       privateKeyPath,
       CSR.getPrivateKey(),
-      { encoding: 'utf-8' }
+      { encoding: 'utf-8' },
     );
     // console.log(newCert);
     this.updateLog(csrPath, certPath, privateKeyPath, expiration, CSR.getHostname());
@@ -105,19 +105,19 @@ module.exports = class CA {
   updateLog(csrPath, certPath, privateKeyPath, expiration, hostname) {
     const log = JSON.parse(fs.readFileSync(
       this.#private.store.log,
-      { encoding: 'utf-8' }
+      { encoding: 'utf-8' },
     ));
     log.requests.push({
       request: csrPath,
       certificate: certPath,
       privateKey: privateKeyPath,
       expiration,
-      hostname
+      hostname,
     });
     fs.writeFileSync(
       this.#private.store.log,
       JSON.stringify(log),
-      { encoding: 'utf-8' }
+      { encoding: 'utf-8' },
     );
   }
 };

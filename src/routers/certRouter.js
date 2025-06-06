@@ -9,7 +9,7 @@ module.exports = () => {
     .post((req, res) => {
       if (!req.body || typeof req.body !== 'object') {
         return res.status(400).send({
-          error: 'Invalid request body'
+          error: 'Invalid request body',
         });
       }
       const validator = config.getValidator();
@@ -19,7 +19,7 @@ module.exports = () => {
       const {
         hostname,
         altNames,
-        passphrase
+        passphrase,
       } = req.body;
       const newCert = controller.newWebServerCertificate(hostname, passphrase, altNames);
       return res.send(newCert);

@@ -15,11 +15,11 @@ describe('certController', () => {
       verify: jest.fn(() => true),
       getPrivateKey: jest.fn(() => 'priv'),
       getHostname: jest.fn(() => 'foo.example.com'),
-      getCertType: jest.fn(() => 'webServer')
+      getCertType: jest.fn(() => 'webServer'),
     }));
     CA.mockImplementation(() => ({
       unlockCA: jest.fn(),
-      signCSR: jest.fn(() => 'cert')
+      signCSR: jest.fn(() => 'cert'),
     }));
   });
 
