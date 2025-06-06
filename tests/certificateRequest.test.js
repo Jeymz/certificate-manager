@@ -14,7 +14,8 @@ jest.mock('node-forge', () => {
       certificationRequestToPem: jest.fn(() => 'csrPem'),
       privateKeyToPem: jest.fn(() => 'privPem')
     },
-    asn1: { Type: { UTF8: 'utf8' } }
+    asn1: { Type: { UTF8: 'utf8' } },
+    __mockCsr: mockCsr
   };
 });
 
@@ -26,10 +27,21 @@ describe('certificateRequest', () => {
     expect(req.getHostname()).toBe('foo.example.com');
   });
 
+  test('constructor rejects invalid hostname', () => {
+    expect(() => new Request('badhost')).toThrow('Invalid hostname');
+  });
+
   test('sign generates csr', () => {
     const req = new Request('foo.example.com');
     req.sign();
     expect(req.getCSR()).toBe('csrPem');
+  });
+
+  test('verify proxies to csr', () => {
+    const req = new Request('foo.example.com');
+    req.sign();
+    expect(req.verify()).toBe(true);
+    expect(require('node-forge').__mockCsr.verify).toHaveBeenCalled();
   });
 
   test('setCertType validates input', () => {
@@ -37,5 +49,12 @@ describe('certificateRequest', () => {
     expect(() => req.setCertType('invalid')).toThrow();
     req.setCertType('webServer');
     expect(req.getCertType()).toBe('webServer');
+  });
+
+  test('addAltNames adds SAN extension', () => {
+    const req = new Request('foo.example.com');
+    req.addAltNames(['bar.example.com']);
+    req.sign();
+    expect(require('node-forge').__mockCsr.setAttributes).toHaveBeenCalled();
   });
 });

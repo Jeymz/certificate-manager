@@ -13,6 +13,8 @@ describe('validator', () => {
 
   test('invalid hostname is rejected', () => {
     expect(validator.hostname('foo.com')).toBe(false);
+    expect(validator.hostname('badhost')).toBe(false);
+    expect(validator.hostname('foo.bad.com')).toBe(false);
   });
 
   test('schema validation', () => {

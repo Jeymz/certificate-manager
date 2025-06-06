@@ -5,12 +5,12 @@ const controller = require('../src/controllers/certController');
 
 jest.mock('../src/controllers/certController');
 
-const configMock = {
+const mockConfig = {
   getValidator: jest.fn(() => ({ validateSchema: jest.fn(() => true) })),
   isInitialized: jest.fn(() => true)
 };
 
-jest.mock('../src/resources/config', () => jest.fn(() => configMock));
+jest.mock('../src/resources/config', () => jest.fn(() => mockConfig));
 
 const routerFactory = require('../src/routers/certRouter');
 
@@ -31,5 +31,10 @@ describe('certRouter', () => {
     controller.newWebServerCertificate.mockReturnValue({ ok: true });
     const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p' });
     expect(res.body).toEqual({ ok: true });
+  });
+
+  test('post /new rejects invalid body', async () => {
+    const invalid = await request(app).post('/new').send('bad');
+    expect(invalid.status).toBe(400);
   });
 });

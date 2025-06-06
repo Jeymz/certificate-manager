@@ -20,8 +20,20 @@ const fs = require('fs');
 const CA = require('../src/resources/ca');
 
 beforeEach(() => {
-  fs.readFileSync.mockReturnValue('dummy');
+  fs.readFileSync.mockImplementation((file) => {
+    if (file.includes('defaults.json')) {
+      return JSON.stringify({
+        server: { port: 3000 },
+        storeDirectory: './files',
+        subject: {},
+        validDomains: ['example.com'],
+        extensions: { webServer: [] }
+      });
+    }
+    return 'dummy';
+  });
   fs.writeFileSync.mockImplementation(() => {});
+  fs.existsSync = jest.fn(() => false);
 });
 
 describe('CA resource', () => {
@@ -37,5 +49,12 @@ describe('CA resource', () => {
     expect(() => ca.signCSR(csr)).toThrow();
     ca.unlockCA('pass');
     expect(ca.signCSR(csr)).toBe('signedCert');
+  });
+
+  test('getSerial increments serial', () => {
+    const ca = new CA();
+    fs.readFileSync.mockReturnValueOnce('1');
+    const serial = ca.getSerial();
+    expect(serial).toBe('2');
   });
 });
