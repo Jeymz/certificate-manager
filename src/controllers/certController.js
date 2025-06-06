@@ -10,7 +10,7 @@ module.exports = {
     csr.sign();
     if (!csr.verify()) {
       return {
-        error: 'Unable to verify CSR'
+        error: 'Unable to verify CSR',
       };
     }
     const ca = new CA();
@@ -20,7 +20,7 @@ module.exports = {
     return {
       certificate,
       privateKey,
-      hostname
+      hostname,
     };
-  }
+  },
 };

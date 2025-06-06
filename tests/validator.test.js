@@ -20,7 +20,7 @@ describe('validator', () => {
   test('schema validation', () => {
     const valid = {
       hostname: 'foo.example.com',
-      passphrase: 'secret'
+      passphrase: 'secret',
     };
     expect(validator.validateSchema('new', valid)).toBe(true);
     expect(validator.validateSchema('new', { hostname: 'x' })).toBe(false);

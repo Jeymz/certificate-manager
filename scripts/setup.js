@@ -11,12 +11,12 @@ function createCA() {
     modulusLength: 4096,
     publicKeyEncoding: {
       type: 'spki',
-      format: 'pem'
+      format: 'pem',
     },
     privateKeyEncoding: {
       type: 'pkcs8',
-      format: 'pem'
-    }
+      format: 'pem',
+    },
   };
   if (process.env.CAPASS) {
     options.privateKeyEncoding.cipher = 'aes-256-cbc';
@@ -26,9 +26,9 @@ function createCA() {
   const keys = {
     privateKey: forge.pki.decryptRsaPrivateKey(
       keypair.privateKey,
-      process.env.CAPASS.toString().trim()
+      process.env.CAPASS.toString().trim(),
     ),
-    publicKey: forge.pki.publicKeyFromPem(keypair.publicKey)
+    publicKey: forge.pki.publicKeyFromPem(keypair.publicKey),
   };
   console.log('Key-pair created.');
   console.log('Creating self-signed certificate...');
@@ -41,18 +41,18 @@ function createCA() {
   const attrs = config.getSubject();
   attrs.push({
     shortName: 'CN',
-    value: 'Robotti Tech Services - Root CA'
+    value: 'Robotti Tech Services - Root CA',
   });
   cert.setSubject(attrs);
   cert.setIssuer(attrs);
 
   cert.setExtensions([{
     name: 'basicConstraints',
-    cA: true
+    cA: true,
   }, {
-    name: 'subjectKeyIdentifier'
+    name: 'subjectKeyIdentifier',
   }, {
-    name: 'authorityKeyIdentifier'
+    name: 'authorityKeyIdentifier',
   }]);
 
   // self-sign certificate
@@ -62,7 +62,7 @@ function createCA() {
   const pem = {
     privateKey: forge.pki.privateKeyToPem(keys.privateKey),
     publicKey: forge.pki.publicKeyToPem(keys.publicKey),
-    certificate: forge.pki.certificateToPem(cert)
+    certificate: forge.pki.certificateToPem(cert),
   };
 
   if (!fs.existsSync(config.getStoreDirectory())) {
@@ -87,7 +87,7 @@ function createCA() {
   fs.writeFileSync(path.join(config.getStoreDirectory(), 'public', 'ca.pubkey.pem'), keypair.publicKey, { encoding: 'utf-8' });
   fs.writeFileSync(path.join(config.getStoreDirectory(), 'certs', 'ca.cert.crt'), pem.certificate, { encoding: 'utf-8' });
   fs.writeFileSync(path.join(config.getStoreDirectory(), 'log.json'), JSON.stringify({
-    requests: []
+    requests: [],
   }), { encoding: 'utf-8' });
   fs.writeFileSync(path.join(config.getStoreDirectory(), 'serial'), '1000000', { encoding: 'utf-8' });
   console.log('Certificate created.');

@@ -19,7 +19,7 @@ module.exports = class Validator {
       return false;
     }
     if (this.#private.config.validDomains.indexOf(
-      `${hostnameParts[hostnameParts.length - 2]}.${hostnameParts[hostnameParts.length - 1]}`
+      `${hostnameParts[hostnameParts.length - 2]}.${hostnameParts[hostnameParts.length - 1]}`,
     ) < 0) {
       return false;
     }

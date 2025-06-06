@@ -3,7 +3,7 @@ jest.mock('node-forge', () => {
     setSubject: jest.fn(),
     setAttributes: jest.fn(),
     sign: jest.fn(),
-    verify: jest.fn(() => true)
+    verify: jest.fn(() => true),
   };
   return {
     pki: {
@@ -12,10 +12,10 @@ jest.mock('node-forge', () => {
       createCertificationRequest: jest.fn(() => mockCsr),
       publicKeyFromPem: jest.fn(),
       certificationRequestToPem: jest.fn(() => 'csrPem'),
-      privateKeyToPem: jest.fn(() => 'privPem')
+      privateKeyToPem: jest.fn(() => 'privPem'),
     },
     asn1: { Type: { UTF8: 'utf8' } },
-    __mockCsr: mockCsr
+    __mockCsr: mockCsr,
   };
 });
 
@@ -56,5 +56,33 @@ describe('certificateRequest', () => {
     req.addAltNames(['bar.example.com']);
     req.sign();
     expect(require('node-forge').__mockCsr.setAttributes).toHaveBeenCalled();
+  });
+
+  test('invalid SAN entries are ignored', () => {
+    const forge = require('node-forge');
+    forge.__mockCsr.setAttributes.mockClear();
+    const req = new Request('foo.example.com');
+    req.addAltNames(['bar.bad.com', 'BAR.EXAMPLE.COM', 'foo.com']);
+    req.sign();
+    const attrs = forge.__mockCsr.setAttributes.mock.calls[0][0];
+    const ext = attrs.find((a) => a.name === 'extensionRequest');
+    expect(ext.extensions[0].altNames).toEqual([
+      { type: 2, value: 'bar.example.com' },
+    ]);
+  });
+
+  test('ip SAN entries are allowed', () => {
+    const forge = require('node-forge');
+    forge.__mockCsr.setAttributes.mockClear();
+    const req = new Request('foo.example.com');
+    req.addAltNames(['192.168.0.1', 'BAR.EXAMPLE.COM', '10.0.0.1']);
+    req.sign();
+    const attrs = forge.__mockCsr.setAttributes.mock.calls[0][0];
+    const ext = attrs.find((a) => a.name === 'extensionRequest');
+    expect(ext.extensions[0].altNames).toEqual([
+      { type: 7, ip: '192.168.0.1' },
+      { type: 2, value: 'bar.example.com' },
+      { type: 7, ip: '10.0.0.1' },
+    ]);
   });
 });
