@@ -14,14 +14,14 @@ Object.assign(mockConfig, {
   isInitialized: jest.fn(() => true),
 });
 
-const routerFactory = require('../src/routers/certRouter');
+const router = require('../src/routers/certRouter');
 
 describe('certRouter', () => {
   let app;
   beforeEach(() => {
     app = express();
     app.use(express.json());
-    app.use('/', routerFactory());
+    app.use('/', router);
   });
 
   test('root reports readiness', async() => {
