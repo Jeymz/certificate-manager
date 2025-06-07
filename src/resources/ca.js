@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const forge = require('node-forge');
 const config = require('./config')();
+const logger = require('../utils/logger');
 
 module.exports = class CA {
   #private = {};
@@ -77,7 +78,7 @@ module.exports = class CA {
       }
     }
     newCert.setIssuer(caCert.subject.attributes);
-    console.log(extensions);
+    logger.debug(extensions);
     newCert.setExtensions(extensions);
 
     newCert.publicKey = csr.publicKey;
@@ -97,7 +98,6 @@ module.exports = class CA {
       CSR.getPrivateKey(),
       { encoding: 'utf-8' },
     );
-    // console.log(newCert);
     this.updateLog(csrPath, certPath, privateKeyPath, expiration, CSR.getHostname());
     return forge.pki.certificateToPem(newCert);
   }

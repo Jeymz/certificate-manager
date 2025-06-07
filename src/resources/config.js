@@ -2,6 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const forge = require('node-forge');
 const Validator = require('./validator');
+const logger = require('../utils/logger');
 
 const configurationFiles = {
   default: path.join(__dirname, '../', '../', 'config', 'defaults.json'),
@@ -17,7 +18,7 @@ class Config {
     this.#private.configuration = JSON.parse(
       fs.readFileSync(configurationFiles.default, 'utf8'),
     );
-    console.log(path.resolve('./files'));
+    logger.debug(path.resolve('./files'));
     configurationFiles.storeDirectory = path.resolve(this.#private.configuration.storeDirectory);
     this.#private.subjectDefaults = [];
     Object.keys(this.#private.configuration.subject).forEach((key) => {
