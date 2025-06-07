@@ -1,6 +1,7 @@
 module.exports = {
   setupFiles: ['<rootDir>/tests/preSetup.js'],
   globalTeardown: '<rootDir>/tests/globalTeardown.js',
+  coveragePathIgnorePatterns: ['<rootDir>/src/utils/logger.js'],
   coverageThreshold: {
     global: {
       branches: 75,

@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const path = require('path');
 const forge = require('node-forge');
 const config = require('../src/resources/config')();
+const logger = require('../src/utils/logger');
 
 const CA_VALIDITY_YEARS = process.env.CA_VALIDITY_YEARS || 5;
 
@@ -30,8 +31,7 @@ function createCA() {
     ),
     publicKey: forge.pki.publicKeyFromPem(keypair.publicKey),
   };
-  console.log('Key-pair created.');
-  console.log('Creating self-signed certificate...');
+  logger.info('Generated RSA key pair for CA.');
   const cert = forge.pki.createCertificate();
   cert.publicKey = keys.publicKey;
   cert.serialNumber = '1000000';
@@ -66,6 +66,7 @@ function createCA() {
   };
 
   if (!fs.existsSync(config.getStoreDirectory())) {
+    logger.error(`Store directory does not exist: ${config.getStoreDirectory()}`);
     throw new Error('Invalid store directory provided');
   }
   if (!fs.existsSync(path.join(config.getStoreDirectory(), 'private'))) {
@@ -90,11 +91,11 @@ function createCA() {
     requests: [],
   }), { encoding: 'utf-8' });
   fs.writeFileSync(path.join(config.getStoreDirectory(), 'serial'), '1000000', { encoding: 'utf-8' });
-  console.log('Certificate created.');
+  logger.info('CA created successfully.');
 }
 
 if (Object.keys(process.env).indexOf('CAPASS') < 0 || typeof process.env.CAPASS !== 'string') {
-  console.log('Please set an environment variable called CAPASS before running setup');
-} else {
-  createCA();
-}
+  logger.error('CAPASS environment variable must be set to create a new CA.');
+  process.exit(1);
+} 
+createCA();
