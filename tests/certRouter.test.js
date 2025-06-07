@@ -2,6 +2,8 @@ const request = require('supertest');
 const express = require('express');
 
 const controller = require('../src/controllers/certController');
+jest.mock('../src/utils/logger', () => ({ error: jest.fn(), info: jest.fn(), debug: jest.fn() }));
+const logger = require('../src/utils/logger');
 
 jest.mock('../src/controllers/certController');
 
@@ -12,14 +14,14 @@ Object.assign(mockConfig, {
   isInitialized: jest.fn(() => true),
 });
 
-const routerFactory = require('../src/routers/certRouter');
+const router = require('../src/routers/certRouter');
 
 describe('certRouter', () => {
   let app;
   beforeEach(() => {
     app = express();
     app.use(express.json());
-    app.use('/', routerFactory());
+    app.use('/', router);
   });
 
   test('root reports readiness', async() => {
@@ -39,5 +41,17 @@ describe('certRouter', () => {
       .post('/new')
       .send({ invalid: true });
     expect(invalid.status).toBe(400);
+  });
+
+  test('invalid passphrase handled gracefully', async() => {
+    controller.newWebServerCertificate.mockImplementation(() => {
+      throw new Error('CA Key is locked');
+    });
+    const res = await request(app)
+      .post('/new')
+      .send({ hostname: 'foo.example.com', passphrase: 'bad' });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Unable to process request' });
+    expect(logger.error).toHaveBeenCalled();
   });
 });

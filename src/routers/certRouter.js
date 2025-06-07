@@ -1,38 +1,46 @@
 const express = require('express');
 const controller = require('../controllers/certController');
 const config = require('../resources/config')();
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
-module.exports = () => {
-  router.route('/new')
-    .post((req, res) => {
-      if (!req.body || typeof req.body !== 'object') {
-        return res.status(400).send({
-          error: 'Invalid request body',
-        });
-      }
-      const validator = config.getValidator();
-      if (!validator.validateSchema('new', req.body)) {
-        return res.status(400).send('Invalid request body');
-      }
-      const {
-        hostname,
-        altNames,
-        passphrase,
-      } = req.body;
-      const newCert = controller.newWebServerCertificate(hostname, passphrase, altNames);
-      return res.send(newCert);
-    });
 
-  router.route('/')
-    .get((req, res) => {
-      if (config.isInitialized() === true) {
-        res.send('Ready');
-      } else {
-        res.send('Awaiting Setup');
-      }
-    });
 
-  return router;
-};
+router.post('/new', (req, res) => {
+  try {
+    if (!req.body || typeof req.body !== 'object') {
+      logger.error('Invalid request body: must be an object');
+      return res.status(400).send({
+        error: 'Invalid request body',
+      });
+    }
+    const validator = config.getValidator();
+    if (!validator.validateSchema('new', req.body)) {
+      logger.error('Invalid request body: schema validation failed');
+      return res.status(400).send({
+        error: 'Invalid request body: schema validation failed',
+      });
+    }
+    const {
+      hostname,
+      altNames,
+      passphrase,
+    } = req.body;
+    
+    const newCert = controller.newWebServerCertificate(hostname, passphrase, altNames);
+    return res.send(newCert);
+  } catch (err) {
+    logger.error(`Error creating certificate: ${err.message}`);
+    return res.status(400).send({ error: 'Unable to process request' });
+  }
+});
+
+router.get('/', (req, res) => {
+  if (config.isInitialized() === true) {
+    return res.send('Ready');
+  } 
+  return res.send('Awaiting Setup');
+});
+
+module.exports = router;
