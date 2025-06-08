@@ -7,7 +7,7 @@ const router = express.Router();
 
 
 
-router.post('/new', (req, res) => {
+router.post('/new', async (req, res) => {
   try {
     if (!req.body || typeof req.body !== 'object') {
       logger.error('Invalid request body: must be an object');
@@ -28,7 +28,7 @@ router.post('/new', (req, res) => {
       passphrase,
     } = req.body;
     
-    const newCert = controller.newWebServerCertificate(hostname, passphrase, altNames);
+    const newCert = await controller.newWebServerCertificate(hostname, passphrase, altNames);
     return res.send(newCert);
   } catch (err) {
     logger.error(`Error creating certificate: ${err.message}`);

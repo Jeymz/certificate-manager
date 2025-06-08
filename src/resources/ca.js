@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const path = require('path');
 const forge = require('node-forge');
 const config = require('./config')();
@@ -15,23 +15,26 @@ module.exports = class CA {
       root: storeDirectory,
       log: path.join(storeDirectory, 'log.json'),
     };
-    this.#private.serial = fs.readFileSync(
-      path.join(this.#private.store.root, 'serial'),
-      'utf-8',
-    );
-    this.#private.caCert = fs.readFileSync(
-      path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
-      'utf-8',
-    );
-    this.#private.lockedKey = fs.readFileSync(
-      path.join(this.#private.store.root, 'private', 'ca.key.pem'),
-      'utf-8',
-    );
+    return (async () => {
+      this.#private.serial = await fs.readFile(
+        path.join(this.#private.store.root, 'serial'),
+        'utf-8',
+      );
+      this.#private.caCert = await fs.readFile(
+        path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
+        'utf-8',
+      );
+      this.#private.lockedKey = await fs.readFile(
+        path.join(this.#private.store.root, 'private', 'ca.key.pem'),
+        'utf-8',
+      );
+      return this;
+    })();
   }
 
-  getSerial() {
+  async getSerial() {
     this.#private.serial = (parseInt(this.#private.serial, 10) + 1).toString();
-    fs.writeFileSync(
+    await fs.writeFile(
       path.join(this.#private.store.root, 'serial'),
       this.#private.serial,
       'utf-8',
@@ -43,7 +46,7 @@ module.exports = class CA {
     this.#private.caKey = forge.pki.decryptRsaPrivateKey(this.#private.lockedKey, passphrase);
   }
 
-  signCSR(CSR) {
+  async signCSR(CSR) {
     if (!this.#private.caKey) {
       throw new Error('CA Key is locked');
     }
@@ -54,7 +57,7 @@ module.exports = class CA {
       throw new Error('Invalid CSR');
     }
     const newCert = forge.pki.createCertificate();
-    newCert.serialNumber = this.getSerial();
+    newCert.serialNumber = await this.getSerial();
     const certFilename = `${CSR.getHostname()}.cert.crt`;
     const requestFilename = `${CSR.getHostname()}.request.pem`;
     const privateKeyFilename = `${CSR.getHostname()}.key.pem`;
@@ -83,27 +86,27 @@ module.exports = class CA {
 
     newCert.publicKey = csr.publicKey;
     newCert.sign(caKey, forge.md.sha256.create());
-    fs.writeFileSync(
+    await fs.writeFile(
       certPath,
       forge.pki.certificateToPem(newCert),
       { encoding: 'utf-8' },
     );
-    fs.writeFileSync(
+    await fs.writeFile(
       csrPath,
       CSR.getCSR(),
       { encoding: 'utf-8' },
     );
-    fs.writeFileSync(
+    await fs.writeFile(
       privateKeyPath,
       CSR.getPrivateKey(),
       { encoding: 'utf-8' },
     );
-    this.updateLog(csrPath, certPath, privateKeyPath, expiration, CSR.getHostname());
+    await this.updateLog(csrPath, certPath, privateKeyPath, expiration, CSR.getHostname());
     return forge.pki.certificateToPem(newCert);
   }
 
-  updateLog(csrPath, certPath, privateKeyPath, expiration, hostname) {
-    const log = JSON.parse(fs.readFileSync(
+  async updateLog(csrPath, certPath, privateKeyPath, expiration, hostname) {
+    const log = JSON.parse(await fs.readFile(
       this.#private.store.log,
       { encoding: 'utf-8' },
     ));
@@ -114,7 +117,7 @@ module.exports = class CA {
       expiration,
       hostname,
     });
-    fs.writeFileSync(
+    await fs.writeFile(
       this.#private.store.log,
       JSON.stringify(log),
       { encoding: 'utf-8' },

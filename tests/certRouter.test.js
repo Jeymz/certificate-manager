@@ -30,7 +30,7 @@ describe('certRouter', () => {
   });
 
   test('post /new validates body', async() => {
-    controller.newWebServerCertificate.mockReturnValue({ ok: true });
+    controller.newWebServerCertificate.mockResolvedValue({ ok: true });
     const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p' });
     expect(res.body).toEqual({ ok: true });
   });

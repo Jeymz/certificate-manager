@@ -23,13 +23,13 @@ describe('certController', () => {
     }));
   });
 
-  test('newWebServerCertificate returns data', () => {
-    const result = controller.newWebServerCertificate('foo.example.com', 'pass');
+  test('newWebServerCertificate returns data', async () => {
+    const result = await controller.newWebServerCertificate('foo.example.com', 'pass');
     expect(result).toEqual({ certificate: 'cert', privateKey: 'priv', hostname: 'foo.example.com' });
   });
 
-  test('alt names passed to request', () => {
-    controller.newWebServerCertificate('foo.example.com', 'pass', ['alt.example.com']);
+  test('alt names passed to request', async () => {
+    await controller.newWebServerCertificate('foo.example.com', 'pass', ['alt.example.com']);
     expect(CSR).toHaveBeenCalledWith('foo.example.com');
     expect(CSR.mock.results[0].value.addAltNames).toHaveBeenCalledWith(['alt.example.com']);
   });
