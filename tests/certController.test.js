@@ -21,12 +21,13 @@ describe('certController', () => {
     CA.mockImplementation(() => ({
       unlockCA: jest.fn(),
       signCSR: jest.fn(() => 'cert'),
+      getCACertificate: jest.fn(() => 'caCert'),
     }));
   });
 
   test('newWebServerCertificate returns data', async() => {
     const result = await controller.newWebServerCertificate('foo.example.com', 'pass');
-    expect(result).toEqual({ certificate: 'cert', privateKey: 'priv', hostname: 'foo.example.com' });
+    expect(result).toEqual({ certificate: 'cert', privateKey: 'priv', hostname: 'foo.example.com', chain: 'certcaCert' });
     expect(CA).toHaveBeenCalledWith('intermediate');
   });
 

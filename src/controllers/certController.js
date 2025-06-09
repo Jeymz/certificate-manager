@@ -27,11 +27,14 @@ module.exports = {
     const ca = await new CA(config.getDefaultIntermediate());
     ca.unlockCA(passphrase);
     const certificate = await ca.signCSR(csr);
+    const caCert = ca.getCACertificate();
     const privateKey = csr.getPrivateKey();
+    const chain = `${certificate}${caCert}`;
     return {
       certificate,
       privateKey,
       hostname,
+      chain,
     };
   },
 

@@ -79,6 +79,15 @@ module.exports = class CA {
   }
 
   /**
+   * Retrieve the PEM encoded certificate used for signing.
+   *
+   * @returns {string} Signing CA certificate in PEM format.
+   */
+  getCACertificate() {
+    return this.#private.caCert;
+  }
+
+  /**
    * Sign a certificate signing request.
    *
    * @param {import('./certificateRequest')} CSR - Certificate request instance.
@@ -125,11 +134,20 @@ module.exports = class CA {
     logger.debug(extensions);
     newCert.setExtensions(extensions);
     newCert.sign(caKey, forge.md.sha256.create());
+    const certPem = forge.pki.certificateToPem(newCert);
     await fs.writeFile(
       certPath,
-      forge.pki.certificateToPem(newCert),
+      certPem,
       { encoding: 'utf-8' },
     );
+    if (this.#private.store.intermediate) {
+      const chainPath = path.join(
+        this.#private.store.certs,
+        `${CSR.getHostname()}.chain.crt`,
+      );
+      const chainPem = `${certPem}${this.#private.caCert}`;
+      await fs.writeFile(chainPath, chainPem, { encoding: 'utf-8' });
+    }
     await fs.writeFile(
       csrPath,
       CSR.getCSR(),
