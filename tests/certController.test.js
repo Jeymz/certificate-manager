@@ -1,15 +1,15 @@
 jest.mock('../src/resources/certificateRequest');
 jest.mock('../src/resources/ca');
 
-const CSR = require('../src/resources/certificateRequest');
+const CertificateRequest = require('../src/resources/certificateRequest');
 const CA = require('../src/resources/ca');
 const controller = require('../src/controllers/certController');
 
 describe('certController', () => {
   beforeEach(() => {
-    CSR.mockClear();
+    CertificateRequest.mockClear();
     CA.mockClear();
-    CSR.mockImplementation(() => ({
+    CertificateRequest.mockImplementation(() => ({
       addAltNames: jest.fn(),
       sign: jest.fn(),
       verify: jest.fn(() => true),
@@ -30,7 +30,7 @@ describe('certController', () => {
 
   test('alt names passed to request', async() => {
     await controller.newWebServerCertificate('foo.example.com', 'pass', ['alt.example.com']);
-    expect(CSR).toHaveBeenCalledWith('foo.example.com');
-    expect(CSR.mock.results[0].value.addAltNames).toHaveBeenCalledWith(['alt.example.com']);
+    expect(CertificateRequest).toHaveBeenCalledWith('foo.example.com');
+    expect(CertificateRequest.mock.results[0].value.addAltNames).toHaveBeenCalledWith(['alt.example.com']);
   });
 });
