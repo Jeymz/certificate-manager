@@ -68,12 +68,12 @@ dependency. Installation differs slightly for each case.
        "shortName": "C",
        "default": "US" // <- 2 character Country Code
      }
-   },
-  "validDomains": [
-    "example.com" // <- This is used to validate cert request hostnames not alternate names
-  ],
-  "defaultIntermediate": "intermediate", // <- Intermediate CA used for server certificates
-  ...
+    },
+   "validDomains": [
+     "example.com" // <- This is used to validate cert request hostnames not alternate names
+   ],
+   "defaultIntermediate": "intermediate", // <- Intermediate CA used for server certificates
+   ...
    ```
 
 3. Set a CA passphrase in your environment variables and run setup.
