@@ -1,4 +1,4 @@
-const fs = require('fs');
+const fs = require('fs').promises;
 const crypto = require('crypto');
 const path = require('path');
 const forge = require('node-forge');
@@ -7,7 +7,7 @@ const logger = require('../src/utils/logger');
 
 const CA_VALIDITY_YEARS = process.env.CA_VALIDITY_YEARS || 5;
 
-function createCA() {
+async function createCA() {
   const options = {
     modulusLength: 4096,
     publicKeyEncoding: {
@@ -23,7 +23,15 @@ function createCA() {
     options.privateKeyEncoding.cipher = 'aes-256-cbc';
     options.privateKeyEncoding.passphrase = process.env.CAPASS.toString().trim();
   }
-  const keypair = crypto.generateKeyPairSync('rsa', options);
+  const keypair = await new Promise((resolve, reject) => {
+    crypto.generateKeyPair('rsa', options, (err, publicKey, privateKey) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ publicKey, privateKey });
+      }
+    });
+  });
   const keys = {
     privateKey: forge.pki.decryptRsaPrivateKey(
       keypair.privateKey,
@@ -65,37 +73,44 @@ function createCA() {
     certificate: forge.pki.certificateToPem(cert),
   };
 
-  if (!fs.existsSync(config.getStoreDirectory())) {
+  try {
+    await fs.access(config.getStoreDirectory());
+  } catch {
     logger.error(`Store directory does not exist: ${config.getStoreDirectory()}`);
     throw new Error('Invalid store directory provided');
   }
-  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'private'))) {
-    fs.mkdirSync(path.join(config.getStoreDirectory(), 'private'));
+
+  async function ensureDir(dir) {
+    try {
+      await fs.access(dir);
+    } catch {
+      await fs.mkdir(dir, { recursive: true });
+    }
   }
-  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'public'))) {
-    fs.mkdirSync(path.join(config.getStoreDirectory(), 'public'));
-  }
-  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'certs'))) {
-    fs.mkdirSync(path.join(config.getStoreDirectory(), 'certs'));
-  }
-  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'requests'))) {
-    fs.mkdirSync(path.join(config.getStoreDirectory(), 'requests'));
-  }
-  if (!fs.existsSync(path.join(config.getStoreDirectory(), 'newCerts'))) {
-    fs.mkdirSync(path.join(config.getStoreDirectory(), 'newCerts'));
-  }
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'private', 'ca.key.pem'), keypair.privateKey, { encoding: 'utf-8' });
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'public', 'ca.pubkey.pem'), keypair.publicKey, { encoding: 'utf-8' });
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'certs', 'ca.cert.crt'), pem.certificate, { encoding: 'utf-8' });
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'log.json'), JSON.stringify({
+
+  await ensureDir(path.join(config.getStoreDirectory(), 'private'));
+  await ensureDir(path.join(config.getStoreDirectory(), 'public'));
+  await ensureDir(path.join(config.getStoreDirectory(), 'certs'));
+  await ensureDir(path.join(config.getStoreDirectory(), 'requests'));
+  await ensureDir(path.join(config.getStoreDirectory(), 'newCerts'));
+
+  await fs.writeFile(path.join(config.getStoreDirectory(), 'private', 'ca.key.pem'), keypair.privateKey, { encoding: 'utf-8' });
+  await fs.writeFile(path.join(config.getStoreDirectory(), 'public', 'ca.pubkey.pem'), keypair.publicKey, { encoding: 'utf-8' });
+  await fs.writeFile(path.join(config.getStoreDirectory(), 'certs', 'ca.cert.crt'), pem.certificate, { encoding: 'utf-8' });
+  await fs.writeFile(path.join(config.getStoreDirectory(), 'log.json'), JSON.stringify({
     requests: [],
   }), { encoding: 'utf-8' });
-  fs.writeFileSync(path.join(config.getStoreDirectory(), 'serial'), '1000000', { encoding: 'utf-8' });
+  await fs.writeFile(path.join(config.getStoreDirectory(), 'serial'), '1000000', { encoding: 'utf-8' });
   logger.info('CA created successfully.');
 }
 
 if (Object.keys(process.env).indexOf('CAPASS') < 0 || typeof process.env.CAPASS !== 'string') {
   logger.error('CAPASS environment variable must be set to create a new CA.');
   process.exit(1);
-} 
-createCA();
+}
+createCA().catch((err) => {
+  logger.error(err.message);
+  process.exit(1);
+});
+
+module.exports = createCA;
