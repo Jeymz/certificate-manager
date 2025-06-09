@@ -3,9 +3,18 @@ const net = require('net');
 const forge = require('node-forge');
 const config = require('./config')();
 
+/**
+ * Helper for generating certificate signing requests.
+ */
 module.exports = class CertificateRequest {
   #private = {};
 
+  /**
+   * Create a certificate request for the given hostname.
+   *
+   * @param {string} hostname - Fully qualified domain name for the CSR.
+   * @throws {Error} When the hostname fails validation.
+   */
   constructor(hostname) {
     const keypair = forge.pki.rsa.generateKeyPair(2048);
     this.#private.keypair = {
@@ -39,6 +48,12 @@ module.exports = class CertificateRequest {
     this.#private.certType = 'webServer';
   }
 
+  /**
+   * Add subject alternative names to the certificate request.
+   *
+   * @param {string[]} altNames - IP addresses or hostnames to include.
+   * @returns {void}
+   */
   addAltNames(altNames) {
     const subjectAltName = {
       name: 'subjectAltName',
@@ -68,28 +83,60 @@ module.exports = class CertificateRequest {
     }
   }
 
+  /**
+   * Finalize the certificate request and produce a PEM encoded CSR.
+   *
+   * @returns {void}
+   */
   sign() {
     this.#private.csr.setAttributes(this.#private.attributes);
     this.#private.csr.sign(this.#private.keypair.privateKey);
     this.#private.csrPEM = forge.pki.certificationRequestToPem(this.#private.csr);
   }
 
+  /**
+   * Validate that the generated CSR is correctly signed.
+   *
+   * @returns {boolean} True if the CSR's signature is valid.
+   */
   verify() {
     return this.#private.csr.verify();
   }
 
+  /**
+   * Retrieve the primary hostname for this request.
+   *
+   * @returns {string} Hostname tied to the CSR.
+   */
   getHostname() {
     return this.#private.hostname;
   }
 
+  /**
+   * Get the PEM encoded certificate signing request.
+   *
+   * @returns {string} PEM formatted CSR.
+   */
   getCSR() {
     return this.#private.csrPEM;
   }
 
+  /**
+   * Return the generated private key in PEM format.
+   *
+   * @returns {string} PEM encoded private key.
+   */
   getPrivateKey() {
     return forge.pki.privateKeyToPem(this.#private.keypair.privateKey);
   }
 
+  /**
+   * Specify the certificate type used when signing the CSR.
+   *
+   * @param {string} certType - Key for a configured certificate profile.
+   * @throws {Error} When an invalid type is provided.
+   * @returns {void}
+   */
   setCertType(certType) {
     const certConfigs = config.getCertExtensions();
     if (Object.keys(certConfigs).indexOf(certType.toString()) < 0) {
@@ -99,6 +146,11 @@ module.exports = class CertificateRequest {
     }
   }
 
+  /**
+   * Get the configured certificate type for this request.
+   *
+   * @returns {string} Current certificate type.
+   */
   getCertType() {
     return this.#private.certType;
   }

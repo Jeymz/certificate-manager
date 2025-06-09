@@ -1,3 +1,6 @@
+/**
+ * Entry point for the certificate manager HTTP server.
+ */
 const app = require('./src/app');
 const config = require('./src/resources/config')();
 const logger = require('./src/utils/logger');

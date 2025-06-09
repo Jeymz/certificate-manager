@@ -4,9 +4,17 @@ const forge = require('node-forge');
 const config = require('./config')();
 const logger = require('../utils/logger');
 
+/**
+ * Certificate Authority helper for issuing and tracking certificates.
+ */
 module.exports = class CA {
   #private = {};
 
+  /**
+   * Create a new CA instance and asynchronously load key material.
+   *
+   * @returns {Promise<CA>} Resolves when initialization completes.
+   */
   constructor() {
     const storeDirectory = config.getStoreDirectory();
     this.#private.store = {
@@ -32,6 +40,11 @@ module.exports = class CA {
     })();
   }
 
+  /**
+   * Increment and persist the CA serial number.
+   *
+   * @returns {Promise<string>} Resolves to the new serial number as a string.
+   */
   async getSerial() {
     this.#private.serial = (parseInt(this.#private.serial, 10) + 1).toString();
     await fs.writeFile(
@@ -42,10 +55,23 @@ module.exports = class CA {
     return this.#private.serial.toString();
   }
 
+  /**
+   * Decrypt the CA private key using the provided passphrase.
+   *
+   * @param {string} passphrase - Passphrase used to decrypt the key.
+   * @returns {void}
+   */
   unlockCA(passphrase) {
     this.#private.caKey = forge.pki.decryptRsaPrivateKey(this.#private.lockedKey, passphrase);
   }
 
+  /**
+   * Sign a certificate signing request.
+   *
+   * @param {import('./certificateRequest')} CSR - Certificate request instance.
+   * @returns {Promise<string>} Resolves to the PEM encoded certificate.
+   * @throws {Error} If the CA key is locked or the CSR is invalid.
+   */
   async signCSR(CSR) {
     if (!this.#private.caKey) {
       throw new Error('CA Key is locked');
@@ -105,6 +131,16 @@ module.exports = class CA {
     return forge.pki.certificateToPem(newCert);
   }
 
+  /**
+   * Append request details to the certificate issuance log.
+   *
+   * @param {string} csrPath - Path to the stored CSR.
+   * @param {string} certPath - Path to the issued certificate.
+   * @param {string} privateKeyPath - Path to the generated private key.
+   * @param {Date} expiration - Expiration date of the certificate.
+   * @param {string} hostname - Hostname the certificate was issued for.
+   * @returns {Promise<void>}
+   */
   async updateLog(csrPath, certPath, privateKeyPath, expiration, hostname) {
     const log = JSON.parse(await fs.readFile(
       this.#private.store.log,

@@ -1,5 +1,10 @@
 const { createLogger, format, transports } = require('winston');
 
+/**
+ * Application-wide Winston logger instance.
+ * @module logger
+ */
+
 const loggerTransports = [
   new transports.Console({
     format: format.combine(
@@ -20,4 +25,9 @@ const logger = createLogger({
   transports: loggerTransports,
 });
 
+/**
+ * Shared logger instance.
+ *
+ * @type {import('winston').Logger}
+ */
 module.exports = logger;

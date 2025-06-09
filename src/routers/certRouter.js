@@ -3,6 +3,9 @@ const controller = require('../controllers/certController');
 const config = require('../resources/config')();
 const logger = require('../utils/logger');
 
+/**
+ * Express router exposing certificate issuance endpoints.
+ */
 const router = express.Router();
 
 
@@ -43,4 +46,9 @@ router.get('/', (req, res) => {
   return res.send('Awaiting Setup');
 });
 
+/**
+ * Export the configured router for mounting in an Express app.
+ *
+ * @type {import('express').Router}
+ */
 module.exports = router;
