@@ -120,10 +120,9 @@ module.exports = class CA {
       }
     }
     newCert.setIssuer(caCert.subject.attributes);
+    newCert.publicKey = csr.publicKey;
     logger.debug(extensions);
     newCert.setExtensions(extensions);
-
-    newCert.publicKey = csr.publicKey;
     newCert.sign(caKey, forge.md.sha256.create());
     await fs.writeFile(
       certPath,

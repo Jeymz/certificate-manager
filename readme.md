@@ -120,7 +120,7 @@ dependency. Installation differs slightly for each case.
    CAPASS=SecretPassphrase node scripts/setup-intermediate.js intermediate-name
    ```
 
-   This intermediate certificate will be placed under `files/intermediates/` and used by default for server certificates if `defaultIntermediate` is set in the configuration.
+   This intermediate certificate will be placed under `files/intermediates/` and used by default for server certificates if `defaultIntermediate` is set in the configuration. When deploying a server certificate, include this intermediate certificate in the chain or install it on clients so the path validates back to the trusted root.
 
 ## Roadmap / Features
 

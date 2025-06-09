@@ -47,7 +47,9 @@
         "keyEncipherment": true,
         "dataEncipherment": true,
         "keyCertSign": true
-      }
+      },
+      { "name": "subjectKeyIdentifier" },
+      { "name": "authorityKeyIdentifier" }
     ],
     "webServer": [
       {
@@ -63,7 +65,9 @@
       {
         "name": "extKeyUsage",
         "serverAuth": true
-      }
+      },
+      { "name": "subjectKeyIdentifier" },
+      { "name": "authorityKeyIdentifier" }
     ],
     "intermediateCA": [
       {
@@ -76,7 +80,9 @@
         "digitalSignature": true,
         "keyCertSign": true,
         "cRLSign": true
-      }
+      },
+      { "name": "subjectKeyIdentifier" },
+      { "name": "authorityKeyIdentifier" }
     ]
   }
 }
