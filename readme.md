@@ -3,6 +3,31 @@
 ## Warnings
 This is a work in progress. Use at your own risk.
 
+## Setup
+
+The project can be used either as a stand‑alone tool or as a development
+dependency. Installation differs slightly for each case.
+
+### For Users
+
+- Install [Node.js](https://nodejs.org/) **v22** or later
+- Set the `CAPASS` environment variable before running the setup script
+- (Optional) environment variables:
+  - `CA_VALIDITY_YEARS` – number of years the root CA is valid (default `5`)
+  - `LOG_FILE` – path to a log file
+  - `LOG_LEVEL` – log level (default `info`)
+- Install runtime dependencies with `npm install --production`
+- Run `npm run setup` to generate the root CA
+- Start the server with `npm start`
+
+### For Contributors
+
+- Install all dependencies with `npm install` (or `npm ci`)
+- Run `npm run lint` to lint the codebase
+- Execute tests with `npm test`
+- Start the development server with `npm run dev`
+- On Windows you can use `npm run win` instead
+
 ## Example
 1. Copy the configuration example
 ```cmd
@@ -52,12 +77,13 @@ SET CAPASS=SecretPassphrase && npm run setup
 ```
 4. Run the server
 ```cmd
+npm start
+```
+For development use:
+```cmd
 npm run dev
 ```
-Windows users can instead run the following command:
-```cmd
-npm run win
-```
+Windows users can run `npm run win` for development on Windows.
 5. Submit a post request to the http://localhost:`port`/new endpoint with the following json body
 ```json
 {
