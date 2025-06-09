@@ -96,7 +96,8 @@ module.exports = class CA {
       throw new Error(`CSR verification failed for ${CSR.getHostname()}`);
     }
     const newCert = forge.pki.createCertificate();
-    newCert.serialNumber = await this.getSerial();
+    const serial = await this.getSerial();
+    newCert.serialNumber = parseInt(serial, 10).toString(16);
     const certFilename = `${CSR.getHostname()}.cert.crt`;
     const requestFilename = `${CSR.getHostname()}.request.pem`;
     const privateKeyFilename = `${CSR.getHostname()}.key.pem`;

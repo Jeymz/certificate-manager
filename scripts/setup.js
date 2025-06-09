@@ -42,7 +42,7 @@ async function createCA() {
   logger.info('Generated RSA key pair for CA.');
   const cert = forge.pki.createCertificate();
   cert.publicKey = keys.publicKey;
-  cert.serialNumber = '1000000';
+  cert.serialNumber = (1000000).toString(16);
   cert.validity.notBefore = new Date();
   cert.validity.notAfter = new Date();
   cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + CA_VALIDITY_YEARS);
