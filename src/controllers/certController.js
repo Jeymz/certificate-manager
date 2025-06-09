@@ -2,7 +2,7 @@ const CSR = require('../resources/certificateRequest');
 const CA = require('../resources/ca');
 
 module.exports = {
-  newWebServerCertificate: (hostname, passphrase, altNames = false) => {
+  newWebServerCertificate: async(hostname, passphrase, altNames = false) => {
     const csr = new CSR(hostname);
     if (altNames && altNames.length > 0) {
       csr.addAltNames(altNames);
@@ -13,9 +13,9 @@ module.exports = {
         error: 'Unable to verify CSR',
       };
     }
-    const ca = new CA();
+    const ca = await new CA();
     ca.unlockCA(passphrase);
-    const certificate = ca.signCSR(csr);
+    const certificate = await ca.signCSR(csr);
     const privateKey = csr.getPrivateKey();
     return {
       certificate,
