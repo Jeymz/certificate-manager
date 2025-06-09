@@ -52,6 +52,10 @@ SET CAPASS=SecretPassphrase && npm run setup
 ```
 4. Run the server
 ```cmd
+npm run dev
+```
+Windows users can instead run the following command:
+```cmd
 npm run win
 ```
 5. Submit a post request to the http://localhost:`port`/new endpoint with the following json body
@@ -72,4 +76,4 @@ npm run win
 - Allow for creating intermediate CAs
 - Allow more customization regarding certificate types and subjects
 - Alert administrator when certificate is about to expire
-- Enable admins to auto issue new certificates and send to certificate administrator
+- Enable admins to auto issue new certificates and send them to the certificate administrator
