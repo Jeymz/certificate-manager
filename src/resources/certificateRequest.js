@@ -3,7 +3,7 @@ const net = require('net');
 const forge = require('node-forge');
 const config = require('./config')();
 
-module.exports = class request {
+module.exports = class CertificateRequest {
   #private = {};
 
   constructor(hostname) {
