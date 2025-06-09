@@ -10,10 +10,7 @@ const configurationFiles = {
 
 let config = false;
 
-// TODO: Move CA methods to their own class.
-/**
- * Configuration management and validation helper.
- */
+
 /**
  * Configuration management and validation helper.
  */
