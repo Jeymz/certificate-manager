@@ -28,7 +28,7 @@ describe('certificateRequest', () => {
   });
 
   test('constructor rejects invalid hostname', () => {
-    expect(() => new CertificateRequest('badhost')).toThrow('Invalid hostname');
+    expect(() => new CertificateRequest('badhost')).toThrow('Invalid hostname: badhost');
   });
 
   test('sign generates csr', () => {
