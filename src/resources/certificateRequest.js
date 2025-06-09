@@ -27,7 +27,7 @@ module.exports = class CertificateRequest {
     this.#private.validator = config.getValidator();
     const normalized = hostname.toString().toLowerCase();
     if (!this.#private.validator.hostname(normalized)) {
-      throw new Error('Invalid hostname');
+      throw new Error(`Invalid hostname: ${hostname}`);
     }
     subject.push({
       shortName: 'CN',
@@ -140,7 +140,7 @@ module.exports = class CertificateRequest {
   setCertType(certType) {
     const certConfigs = config.getCertExtensions();
     if (Object.keys(certConfigs).indexOf(certType.toString()) < 0) {
-      throw new Error('Invalid or unsupported cert type provided');
+      throw new Error(`Unsupported certificate type '${certType}'. Supported types: ${Object.keys(certConfigs).join(', ')}`);
     } else {
       this.#private.certType = certType.toString();
     }

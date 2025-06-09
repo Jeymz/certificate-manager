@@ -74,13 +74,13 @@ module.exports = class CA {
    */
   async signCSR(CSR) {
     if (!this.#private.caKey) {
-      throw new Error('CA Key is locked');
+      throw new Error(`CA key is locked; unable to sign certificate for ${CSR.getHostname()}`);
     }
     const csr = forge.pki.certificationRequestFromPem(CSR.getCSR());
     const caCert = forge.pki.certificateFromPem(this.#private.caCert);
     const { caKey } = this.#private;
     if (!csr.verify()) {
-      throw new Error('Invalid CSR');
+      throw new Error(`CSR verification failed for ${CSR.getHostname()}`);
     }
     const newCert = forge.pki.createCertificate();
     newCert.serialNumber = await this.getSerial();
