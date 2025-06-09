@@ -11,9 +11,18 @@ const configurationFiles = {
 let config = false;
 
 // TODO: Move CA methods to their own class.
+/**
+ * Configuration management and validation helper.
+ */
+/**
+ * Configuration management and validation helper.
+ */
 class Config {
   #private = {};
 
+  /**
+   * Initialize configuration from defaults and check file system state.
+   */
   constructor() {
     this.#private.configuration = JSON.parse(
       fs.readFileSync(configurationFiles.default, 'utf8'),
@@ -44,32 +53,67 @@ class Config {
     }
   }
 
+  /**
+   * Retrieve a copy of the default certificate subject attributes.
+   *
+   * @returns {Object[]} Array of subject attribute objects.
+   */
   getSubject() {
     return JSON.parse(JSON.stringify(this.#private.subjectDefaults));
   }
 
+  /**
+   * Get the absolute path of the certificate store directory.
+   *
+   * @returns {string} Directory path used to persist certificates.
+   */
   getStoreDirectory() {
     return this.#private.storeDirectory;
   }
 
+  /**
+   * Create a new Validator instance using the loaded configuration.
+   *
+   * @returns {import('./validator')} Validator for input checking.
+   */
   getValidator() {
     return new Validator(this.#private.configuration);
   }
 
+  /**
+   * Determine if the certificate store appears to be initialized.
+   *
+   * @returns {boolean} True when required CA files exist.
+   */
   isInitialized() {
     return this.#private.initialized;
   }
 
+  /**
+   * Provide server configuration settings from the defaults file.
+   *
+   * @returns {Object} Configuration for the web server.
+   */
   getServerConfig() {
     return JSON.parse(JSON.stringify(this.#private.configuration.server));
   }
 
+  /**
+   * Retrieve configured X.509 extension profiles.
+   *
+   * @returns {Object.<string,Array>} Mapping of extension sets by name.
+   */
   getCertExtensions() {
     return JSON.parse(JSON.stringify(this.#private.configuration.extensions));
   }
 
 }
 
+/**
+ * Singleton factory for the Config instance.
+ *
+ * @returns {Config} Configured instance reused across imports.
+ */
 module.exports = () => {
   if (!config) {
     config = new Config();
