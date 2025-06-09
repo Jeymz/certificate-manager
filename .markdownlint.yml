@@ -1,0 +1,2 @@
+# MD013: Line length (false disables the rule that enforces a maximum line length)
+MD013: false

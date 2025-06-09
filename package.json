@@ -8,8 +8,12 @@
     "win": "nodemon server.js",
     "dev": "nodemon server.js",
     "start": "node server.js",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
+    "lint:javascript": "eslint .",
+    "lint:markdown": "markdownlint **/*.md",
+    "lint": "npm run lint:javascript && npm run lint:markdown",
+    "lint:javascript:fix": "eslint . --fix",
+    "lint:markdown:fix": "markdownlint --fix **/*.md",
+    "lint:fix": "npm run lint:javascript:fix && npm run lint:markdown:fix",
     "test": "jest --coverage"
   },
   "author": "Robotti Tech Services",
@@ -32,6 +36,7 @@
     "eslint-plugin-jest": "^28.12.0",
     "globals": "^16.1.0",
     "jest": "^29.6.0",
+    "markdownlint-cli": "^0.45.0",
     "nodemon": "^3.1.10",
     "supertest": "^6.3.3"
   }
