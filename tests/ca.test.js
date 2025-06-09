@@ -67,13 +67,13 @@ beforeEach(() => {
 });
 
 describe('CA resource', () => {
-  test('unlockCA calls decrypt', async () => {
+  test('unlockCA calls decrypt', async() => {
     const ca = await new CA();
     ca.unlockCA('pass');
     expect(require('node-forge').pki.decryptRsaPrivateKey).toHaveBeenCalled();
   });
 
-  test('signCSR requires unlocked key', async () => {
+  test('signCSR requires unlocked key', async() => {
     const ca = await new CA();
     const csr = { getCSR: () => 'csr', getHostname: () => 'foo.example.com', getCertType: () => 'webServer', getPrivateKey: () => 'priv' };
     await expect(ca.signCSR(csr)).rejects.toThrow();
@@ -81,7 +81,7 @@ describe('CA resource', () => {
     await expect(ca.signCSR(csr)).resolves.toBe('signedCert');
   });
 
-  test('getSerial increments serial', async () => {
+  test('getSerial increments serial', async() => {
     const ca = await new CA();
     const serial = await ca.getSerial();
     expect(serial).toBe('2');

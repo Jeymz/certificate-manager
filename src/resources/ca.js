@@ -15,7 +15,7 @@ module.exports = class CA {
       root: storeDirectory,
       log: path.join(storeDirectory, 'log.json'),
     };
-    return (async () => {
+    return (async() => {
       this.#private.serial = await fs.readFile(
         path.join(this.#private.store.root, 'serial'),
         'utf-8',

@@ -2,7 +2,7 @@ const CSR = require('../resources/certificateRequest');
 const CA = require('../resources/ca');
 
 module.exports = {
-  newWebServerCertificate: async (hostname, passphrase, altNames = false) => {
+  newWebServerCertificate: async(hostname, passphrase, altNames = false) => {
     const csr = new CSR(hostname);
     if (altNames && altNames.length > 0) {
       csr.addAltNames(altNames);

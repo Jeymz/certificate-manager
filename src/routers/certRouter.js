@@ -7,7 +7,7 @@ const router = express.Router();
 
 
 
-router.post('/new', async (req, res) => {
+router.post('/new', async(req, res) => {
   try {
     if (!req.body || typeof req.body !== 'object') {
       logger.error('Invalid request body: must be an object');
