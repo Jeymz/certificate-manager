@@ -89,6 +89,8 @@ describe('CA resource', () => {
 
   test('constructor loads intermediate when provided', async() => {
     const ca = await new CA('intermediate');
-    expect(fs.promises.readFile).toHaveBeenCalledWith(expect.stringContaining('intermediates/intermediate.cert.crt'), 'utf-8');
+    const path = require('path');
+    const expectedPath = path.join('intermediates', 'intermediate.cert.crt');
+    expect(fs.promises.readFile).toHaveBeenCalledWith(expect.stringContaining(expectedPath), 'utf-8');
   });
 });
