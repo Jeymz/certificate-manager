@@ -104,13 +104,18 @@ async function createCA() {
   logger.info('CA created successfully.');
 }
 
-if (Object.keys(process.env).indexOf('CAPASS') < 0 || typeof process.env.CAPASS !== 'string') {
-  logger.error('CAPASS environment variable must be set to create a new CA.');
-  process.exit(1);
+if (require.main === module) {
+  if (
+    Object.keys(process.env).indexOf('CAPASS') < 0
+    || typeof process.env.CAPASS !== 'string'
+  ) {
+    logger.error('CAPASS environment variable must be set to create a new CA.');
+    process.exit(1);
+  }
+  createCA().catch((err) => {
+    logger.error(err.message);
+    process.exit(1);
+  });
 }
-createCA().catch((err) => {
-  logger.error(err.message);
-  process.exit(1);
-});
 
 module.exports = createCA;
