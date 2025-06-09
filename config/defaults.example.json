@@ -33,6 +33,7 @@
   "validDomains": [
     "example.com"
   ],
+  "defaultIntermediate": "intermediate",
   "extensions": {
     "CA": [
       {
@@ -63,6 +64,19 @@
         "name": "extKeyUsage",
         "serverAuth": true
       }
+    ],
+    "intermediateCA": [
+      {
+        "name": "basicConstraints",
+        "cA": true,
+        "pathLenConstraint": 0
+      },
+      {
+        "name": "keyUsage",
+        "digitalSignature": true,
+        "keyCertSign": true,
+        "cRLSign": true
+      }
     ]
-  }  
+  }
 }

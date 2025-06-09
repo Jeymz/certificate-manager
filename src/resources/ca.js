@@ -15,27 +15,40 @@ module.exports = class CA {
    *
    * @returns {Promise<CA>} Resolves when initialization completes.
    */
-  constructor() {
+  constructor(intermediate = null) {
     const storeDirectory = config.getStoreDirectory();
     this.#private.store = {
       certs: path.join(storeDirectory, 'newCerts'),
       requests: path.join(storeDirectory, 'requests'),
       root: storeDirectory,
       log: path.join(storeDirectory, 'log.json'),
+      intermediate,
     };
     return (async() => {
       this.#private.serial = await fs.readFile(
         path.join(this.#private.store.root, 'serial'),
         'utf-8',
       );
-      this.#private.caCert = await fs.readFile(
-        path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
-        'utf-8',
-      );
-      this.#private.lockedKey = await fs.readFile(
-        path.join(this.#private.store.root, 'private', 'ca.key.pem'),
-        'utf-8',
-      );
+      if (intermediate) {
+        const base = path.join(this.#private.store.root, 'intermediates');
+        this.#private.caCert = await fs.readFile(
+          path.join(base, `${intermediate}.cert.crt`),
+          'utf-8',
+        );
+        this.#private.lockedKey = await fs.readFile(
+          path.join(base, `${intermediate}.key.pem`),
+          'utf-8',
+        );
+      } else {
+        this.#private.caCert = await fs.readFile(
+          path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
+          'utf-8',
+        );
+        this.#private.lockedKey = await fs.readFile(
+          path.join(this.#private.store.root, 'private', 'ca.key.pem'),
+          'utf-8',
+        );
+      }
       return this;
     })();
   }
