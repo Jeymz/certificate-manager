@@ -8,6 +8,10 @@ const logger = require('../src/utils/logger');
 const CA_VALIDITY_YEARS = process.env.CA_VALIDITY_YEARS || 5;
 
 async function createCA() {
+  if (config.isInitialized()) {
+    logger.warn('Certificate store already initialized. Aborting setup.');
+    return;
+  }
   const options = {
     modulusLength: 4096,
     publicKeyEncoding: {
