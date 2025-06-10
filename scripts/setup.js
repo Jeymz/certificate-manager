@@ -8,9 +8,9 @@ const logger = require('../src/utils/logger');
 const CA_VALIDITY_YEARS = process.env.CA_VALIDITY_YEARS || 5;
 
 async function createCA() {
+  // Check if the CA is already initialized
   if (config.isInitialized()) {
-    logger.warn('Certificate store already initialized. Aborting setup.');
-    return;
+    throw new Error('CA already initialized. Please remove the existing CA files before creating a new one.');
   }
   const options = {
     modulusLength: 4096,
@@ -117,7 +117,11 @@ if (require.main === module) {
     process.exit(1);
   }
   createCA().catch((err) => {
-    logger.error(err.message);
+    if (err.message) {
+      logger.error(err.message);
+    } else {
+      logger.error('An error occurred while creating the CA:', err);
+    }
     process.exit(1);
   });
 }
