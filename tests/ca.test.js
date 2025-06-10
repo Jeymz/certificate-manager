@@ -16,15 +16,17 @@ jest.mock('node-forge', () => ({
   md: { sha256: { create: jest.fn() } },
 }));
 
+const path = require('path');
 let fs;
 let CA;
 
 beforeEach(() => {
   jest.resetModules();
   fs = require('fs');
+  const configFile = path.basename(process.env.CONFIG_PATH);
   fs.promises = {
     readFile: jest.fn((file) => {
-      if (file.includes('defaults.json')) {
+      if (file.includes(configFile)) {
         return Promise.resolve(JSON.stringify({
           server: { port: 3000 },
           storeDirectory: './files',
@@ -44,7 +46,7 @@ beforeEach(() => {
     writeFile: jest.fn(() => Promise.resolve()),
   };
   fs.readFileSync = jest.fn((file) => {
-    if (file.includes('defaults.json')) {
+    if (file.includes(configFile)) {
       return JSON.stringify({
         server: { port: 3000 },
         storeDirectory: './files',

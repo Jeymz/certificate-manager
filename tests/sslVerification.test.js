@@ -31,7 +31,7 @@ beforeAll(async() => {
 
 afterAll(async() => {
   await fs.rm(path.join(__dirname, '../files'), { recursive: true, force: true });
-  await fs.rm(path.join(__dirname, '../config/defaults.json'), { force: true });
+  await fs.rm(path.join(__dirname, '../config/test.json'), { force: true });
 });
 
 test('intermediate certificate validates with root CA', async() => {
