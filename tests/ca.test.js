@@ -86,4 +86,11 @@ describe('CA resource', () => {
     const serial = await ca.getSerial();
     expect(serial).toBe('2');
   });
+
+  test('constructor loads intermediate when provided', async() => {
+    await new CA('intermediate');
+    const path = require('path');
+    const expectedPath = path.join('intermediates', 'intermediate.cert.crt');
+    expect(fs.promises.readFile).toHaveBeenCalledWith(expect.stringContaining(expectedPath), 'utf-8');
+  });
 });

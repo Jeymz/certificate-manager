@@ -15,27 +15,40 @@ module.exports = class CA {
    *
    * @returns {Promise<CA>} Resolves when initialization completes.
    */
-  constructor() {
+  constructor(intermediate = null) {
     const storeDirectory = config.getStoreDirectory();
     this.#private.store = {
       certs: path.join(storeDirectory, 'newCerts'),
       requests: path.join(storeDirectory, 'requests'),
       root: storeDirectory,
       log: path.join(storeDirectory, 'log.json'),
+      intermediate,
     };
     return (async() => {
       this.#private.serial = await fs.readFile(
         path.join(this.#private.store.root, 'serial'),
         'utf-8',
       );
-      this.#private.caCert = await fs.readFile(
-        path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
-        'utf-8',
-      );
-      this.#private.lockedKey = await fs.readFile(
-        path.join(this.#private.store.root, 'private', 'ca.key.pem'),
-        'utf-8',
-      );
+      if (intermediate) {
+        const base = path.join(this.#private.store.root, 'intermediates');
+        this.#private.caCert = await fs.readFile(
+          path.join(base, `${intermediate}.cert.crt`),
+          'utf-8',
+        );
+        this.#private.lockedKey = await fs.readFile(
+          path.join(base, `${intermediate}.key.pem`),
+          'utf-8',
+        );
+      } else {
+        this.#private.caCert = await fs.readFile(
+          path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
+          'utf-8',
+        );
+        this.#private.lockedKey = await fs.readFile(
+          path.join(this.#private.store.root, 'private', 'ca.key.pem'),
+          'utf-8',
+        );
+      }
       return this;
     })();
   }
@@ -66,6 +79,15 @@ module.exports = class CA {
   }
 
   /**
+   * Retrieve the PEM encoded certificate used for signing.
+   *
+   * @returns {string} Signing CA certificate in PEM format.
+   */
+  getCACertificate() {
+    return this.#private.caCert;
+  }
+
+  /**
    * Sign a certificate signing request.
    *
    * @param {import('./certificateRequest')} CSR - Certificate request instance.
@@ -83,7 +105,8 @@ module.exports = class CA {
       throw new Error(`CSR verification failed for ${CSR.getHostname()}`);
     }
     const newCert = forge.pki.createCertificate();
-    newCert.serialNumber = await this.getSerial();
+    const serial = await this.getSerial();
+    newCert.serialNumber = parseInt(serial, 10).toString(16);
     const certFilename = `${CSR.getHostname()}.cert.crt`;
     const requestFilename = `${CSR.getHostname()}.request.pem`;
     const privateKeyFilename = `${CSR.getHostname()}.key.pem`;
@@ -107,16 +130,24 @@ module.exports = class CA {
       }
     }
     newCert.setIssuer(caCert.subject.attributes);
+    newCert.publicKey = csr.publicKey;
     logger.debug(extensions);
     newCert.setExtensions(extensions);
-
-    newCert.publicKey = csr.publicKey;
     newCert.sign(caKey, forge.md.sha256.create());
+    const certPem = forge.pki.certificateToPem(newCert);
     await fs.writeFile(
       certPath,
-      forge.pki.certificateToPem(newCert),
+      certPem,
       { encoding: 'utf-8' },
     );
+    if (this.#private.store.intermediate) {
+      const chainPath = path.join(
+        this.#private.store.certs,
+        `${CSR.getHostname()}.chain.crt`,
+      );
+      const chainPem = `${certPem}${this.#private.caCert}`;
+      await fs.writeFile(chainPath, chainPem, { encoding: 'utf-8' });
+    }
     await fs.writeFile(
       csrPath,
       CSR.getCSR(),

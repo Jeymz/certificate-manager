@@ -68,10 +68,11 @@ dependency. Installation differs slightly for each case.
        "shortName": "C",
        "default": "US" // <- 2 character Country Code
      }
-   },
+    },
    "validDomains": [
      "example.com" // <- This is used to validate cert request hostnames not alternate names
    ],
+   "defaultIntermediate": "intermediate", // <- Intermediate CA used for server certificates
    ...
    ```
 
@@ -113,9 +114,17 @@ dependency. Installation differs slightly for each case.
 
 6. All your web certs will be saved to the directory specified in the config in the `newCerts` directory. Private keys are all in the `private` directory. Your Root CA cert is in the `certs` folder and will need to be applied to all machines as a Trusted Root Certificate
 
+7. (Optional) Create an intermediate CA by posting to `http://localhost:{{SERVER.PORT}}/intermediate` or running:
+
+   ```cmd
+   CAPASS=SecretPassphrase node scripts/setup-intermediate.js intermediate-name
+   ```
+
+   This intermediate certificate will be placed under `files/intermediates/` and used by default for server certificates if `defaultIntermediate` is set in the configuration. When a server certificate is issued it is saved alongside a `.chain.crt` file containing both the server and intermediate certificates and the HTTP response includes this chain in a `chain` property. Present this chain so clients can validate the path using only the trusted root certificate.
+
 ## Roadmap / Features
 
-- Allow for creating intermediate CAs
+- Create intermediate CAs using the setup script or `/intermediate` endpoint
 - Allow more customization regarding certificate types and subjects
 - Alert administrator when certificate is about to expire
 - Enable admins to auto issue new certificates and send them to the certificate administrator

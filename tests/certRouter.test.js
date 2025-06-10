@@ -54,4 +54,12 @@ describe('certRouter', () => {
     expect(res.body).toEqual({ error: 'Unable to process request' });
     expect(logger.error).toHaveBeenCalled();
   });
+
+  test('post /intermediate forwards to controller', async() => {
+    controller.newIntermediateCA.mockResolvedValue({ ok: true });
+    const res = await request(app)
+      .post('/intermediate')
+      .send({ hostname: 'intermediate.example.com', passphrase: 'p' });
+    expect(res.body).toEqual({ ok: true });
+  });
 });

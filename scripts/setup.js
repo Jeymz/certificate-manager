@@ -42,7 +42,7 @@ async function createCA() {
   logger.info('Generated RSA key pair for CA.');
   const cert = forge.pki.createCertificate();
   cert.publicKey = keys.publicKey;
-  cert.serialNumber = '1000000';
+  cert.serialNumber = (1000000).toString(16);
   cert.validity.notBefore = new Date();
   cert.validity.notAfter = new Date();
   cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + CA_VALIDITY_YEARS);
@@ -104,13 +104,18 @@ async function createCA() {
   logger.info('CA created successfully.');
 }
 
-if (Object.keys(process.env).indexOf('CAPASS') < 0 || typeof process.env.CAPASS !== 'string') {
-  logger.error('CAPASS environment variable must be set to create a new CA.');
-  process.exit(1);
+if (require.main === module) {
+  if (
+    Object.keys(process.env).indexOf('CAPASS') < 0
+    || typeof process.env.CAPASS !== 'string'
+  ) {
+    logger.error('CAPASS environment variable must be set to create a new CA.');
+    process.exit(1);
+  }
+  createCA().catch((err) => {
+    logger.error(err.message);
+    process.exit(1);
+  });
 }
-createCA().catch((err) => {
-  logger.error(err.message);
-  process.exit(1);
-});
 
 module.exports = createCA;

@@ -39,4 +39,9 @@ describe('config resource', () => {
     expect(config.getStoreDirectory()).toContain('files');
     expect(config.getCertExtensions()).toHaveProperty('webServer');
   });
+
+  test('getDefaultIntermediate returns configured value', () => {
+    const config = configFactory();
+    expect(config.getDefaultIntermediate()).toBe('intermediate');
+  });
 });
