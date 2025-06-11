@@ -29,7 +29,7 @@ beforeEach(() => {
       if (file.includes(configFile)) {
         return Promise.resolve(JSON.stringify({
           server: { port: 3000 },
-          storeDirectory: './test_files',
+          storeDirectory: './files_test',
           subject: {},
           validDomains: ['example.com'],
           extensions: { webServer: [] },
@@ -49,7 +49,7 @@ beforeEach(() => {
     if (file.includes(configFile)) {
       return JSON.stringify({
         server: { port: 3000 },
-        storeDirectory: './test_files',
+        storeDirectory: './files_test',
         subject: {},
         validDomains: ['example.com'],
         extensions: { webServer: [] },

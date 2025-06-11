@@ -4,7 +4,7 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "setup": "npm install --production && node scripts/setup.js",
+    "setup": "node scripts/setup.js",
     "win": "nodemon server.js",
     "dev": "nodemon server.js",
     "start": "node server.js",

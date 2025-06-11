@@ -36,7 +36,7 @@ describe('config resource', () => {
 
   test('getStoreDirectory and extensions', () => {
     const config = configFactory();
-    expect(config.getStoreDirectory()).toContain('test_files');
+    expect(config.getStoreDirectory()).toContain('files_test');
     expect(config.getCertExtensions()).toHaveProperty('webServer');
   });
 
