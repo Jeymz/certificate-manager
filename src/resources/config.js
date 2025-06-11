@@ -5,7 +5,9 @@ const Validator = require('./validator');
 const logger = require('../utils/logger');
 
 const configurationFiles = {
-  default: path.join(__dirname, '../', '../', 'config', 'defaults.json'),
+  default: process.env.CONFIG_PATH
+    ? path.resolve(process.env.CONFIG_PATH)
+    : path.join(__dirname, '../', '../', 'config', 'defaults.json'),
 };
 
 let config = false;
