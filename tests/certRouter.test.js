@@ -1,18 +1,22 @@
 const request = require('supertest');
 const express = require('express');
 
+jest.mock('../src/controllers/certController', () => ({
+  newWebServerCertificate: jest.fn(),
+  newIntermediateCA: jest.fn(),
+  revokeCertificate: jest.fn(),
+  getCRL: jest.fn(),
+}));
 const controller = require('../src/controllers/certController');
 jest.mock('../src/utils/logger', () => ({ error: jest.fn(), info: jest.fn(), debug: jest.fn() }));
 const logger = require('../src/utils/logger');
 
-jest.mock('../src/controllers/certController');
-
-var mockConfig = {};
-jest.mock('../src/resources/config', () => jest.fn(() => mockConfig));
-Object.assign(mockConfig, {
+var mockConfig = {
   getValidator: jest.fn(() => ({ validateSchema: jest.fn(() => true) })),
   isInitialized: jest.fn(() => true),
-});
+  getStoreDirectory: jest.fn(() => './files_test'),
+};
+jest.mock('../src/resources/config', () => jest.fn(() => mockConfig));
 
 const router = require('../src/routers/certRouter');
 
@@ -65,5 +69,28 @@ describe('certRouter', () => {
       .send({ hostname: 'intermediate.example.com', passphrase: 'p', intermediatePassphrase: 'int' });
     expect(res.body).toEqual({ ok: true });
     expect(controller.newIntermediateCA).toHaveBeenCalledWith('intermediate.example.com', 'p', 'int');
+  });
+
+  test('post /revoke forwards to controller', async() => {
+    controller.revokeCertificate.mockResolvedValue({ revoked: true });
+    const res = await request(app)
+      .post('/revoke')
+      .send({ serialNumber: '1', reason: 'KeyCompromise' });
+    expect(res.body).toEqual({ revoked: true });
+    expect(controller.revokeCertificate).toHaveBeenCalledWith('1', 'KeyCompromise');
+  });
+
+  test('post /revoke returns 404 when not found', async() => {
+    controller.revokeCertificate.mockResolvedValue({ error: 'Serial not found' });
+    const res = await request(app)
+      .post('/revoke')
+      .send({ serialNumber: '99' });
+    expect(res.status).toBe(404);
+  });
+
+  test('get /crl returns data', async() => {
+    controller.getCRL.mockResolvedValue({ revoked: [] });
+    const res = await request(app).get('/crl');
+    expect(res.body).toEqual({ revoked: [] });
   });
 });

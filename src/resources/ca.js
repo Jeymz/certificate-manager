@@ -3,6 +3,7 @@ const path = require('path');
 const forge = require('node-forge');
 const config = require('./config')();
 const logger = require('../utils/logger');
+const revocation = require('./revocation');
 
 /**
  * Certificate Authority helper for issuing and tracking certificates.
@@ -187,6 +188,7 @@ module.exports = class CA {
       CSR.getPrivateKey(),
       { encoding: 'utf-8' },
     );
+    await revocation.add(serial, CSR.getHostname(), expiration.toISOString());
     await this.updateLog(csrPath, certPath, privateKeyPath, expiration, CSR.getHostname());
     return forge.pki.certificateToPem(newCert);
   }

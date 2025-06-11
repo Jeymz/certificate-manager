@@ -7,8 +7,13 @@ describe('config resource', () => {
   });
 
   test('isInitialized returns false without files', () => {
-    const config = configFactory();
+    const fs = require('fs');
+    jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+    jest.resetModules();
+    const freshFactory = require('../src/resources/config');
+    const config = freshFactory();
     expect(config.isInitialized()).toBe(false);
+    fs.existsSync.mockRestore();
   });
 
   test('isInitialized true when files present', () => {

@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const CertificateRequest = require('../resources/certificateRequest');
 const CA = require('../resources/ca');
 const config = require('../resources/config')();
+const revocation = require('../resources/revocation');
 
 module.exports = {
   /**
@@ -90,5 +91,30 @@ module.exports = {
     await fs.writeFile(path.join(intDir, `${hostname}.cert.crt`), certificate, { encoding: 'utf-8' });
     await fs.writeFile(path.join(intDir, `${hostname}.key.pem`), privateKey, { encoding: 'utf-8' });
     return { certificate, privateKey, hostname };
+  },
+
+  /**
+   * Revoke a previously issued certificate.
+   *
+   * @param {string} serialNumber - Serial number of the certificate.
+   * @param {string} [reason] - Optional revocation reason.
+   * @returns {Promise<Object>} Result of the revocation request.
+   */
+  revokeCertificate: async(serialNumber, reason) => {
+    const result = await revocation.revoke(serialNumber.toString(), reason);
+    if (!result) {
+      return { error: 'Serial not found' };
+    }
+    return { revoked: true };
+  },
+
+  /**
+   * Retrieve the certificate revocation list.
+   *
+   * @returns {Promise<Object>} List of revoked certificates.
+   */
+  getCRL: async() => {
+    const revoked = await revocation.getRevoked();
+    return { revoked };
   },
 };
