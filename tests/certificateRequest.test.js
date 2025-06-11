@@ -21,6 +21,10 @@ jest.mock('node-forge', () => {
       privateKeyFromPem: jest.fn(() => 'pemKey'),
     },
     pkcs12: { toPkcs12Asn1: jest.fn(() => 'asn1') },
+    pem: {
+      decode: jest.fn(() => [{ type: 'CERTIFICATE', body: 'body' }]),
+      encode: jest.fn(() => 'certPem'),
+    },
     asn1: {
       Type: { UTF8: 'utf8' },
       toDer: jest.fn(() => ({ getBytes: jest.fn(() => 'bytes') })),
@@ -109,5 +113,11 @@ describe('certificateRequest', () => {
     const result = req.getPkcs12Bundle('certPem', 'chainPem', 'pass');
     expect(forge.pkcs12.toPkcs12Asn1).toHaveBeenCalled();
     expect(typeof result).toBe('string');
+  });
+
+  test('getPkcs12Bundle enforces password policy', () => {
+    const req = new CertificateRequest('foo.example.com');
+    expect(() => req.getPkcs12Bundle('certPem', 'chainPem')).toThrow('Password required');
+    expect(() => req.getPkcs12Bundle('certPem', 'chainPem', 'a')).toThrow('Password required');
   });
 });

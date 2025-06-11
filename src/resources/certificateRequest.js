@@ -200,15 +200,18 @@ module.exports = class CertificateRequest {
    * @returns {string} Base64 encoded PKCS#12 archive.
    */
   getPkcs12Bundle(certificate, chain, password) {
+    if (!password || password.length < 4) {
+      throw new Error('Password required for PKCS#12 export (minimum 4 characters)');
+    }
     const leaf = forge.pki.certificateFromPem(certificate);
     const caCerts = [];
     if (chain) {
-      const matches = chain.match(/-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----/g);
-      if (matches) {
-        matches.forEach((pem) => {
-          caCerts.push(forge.pki.certificateFromPem(pem));
-        });
-      }
+      const blocks = forge.pem.decode(chain);
+      blocks.forEach((block) => {
+        if (block.type === 'CERTIFICATE') {
+          caCerts.push(forge.pki.certificateFromPem(forge.pem.encode(block)));
+        }
+      });
     }
     const pkcs12Asn1 = forge.pkcs12.toPkcs12Asn1(
       this.#private.keypair.privateKey,
