@@ -107,4 +107,10 @@ describe('CA resource', () => {
     const expectedPath = path.join('intermediates', 'intermediate.cert.crt');
     expect(fs.promises.readFile).toHaveBeenCalledWith(expect.stringContaining(expectedPath), 'utf-8');
   });
+
+  test('getCertChain returns chain', async() => {
+    const ca = await new CA('intermediate');
+    const chain = ca.getCertChain();
+    expect(typeof chain).toBe('string');
+  });
 });

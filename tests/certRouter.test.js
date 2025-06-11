@@ -31,8 +31,9 @@ describe('certRouter', () => {
 
   test('post /new validates body', async() => {
     controller.newWebServerCertificate.mockResolvedValue({ ok: true });
-    const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p' });
+    const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p', bundleP12: true, password: 'pass' });
     expect(res.body).toEqual({ ok: true });
+    expect(controller.newWebServerCertificate).toHaveBeenCalledWith('foo.example.com', 'p', undefined, true, 'pass');
   });
 
   test('post /new rejects invalid body', async() => {

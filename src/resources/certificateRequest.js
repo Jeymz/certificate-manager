@@ -190,4 +190,36 @@ module.exports = class CertificateRequest {
   getCertType() {
     return this.#private.certType;
   }
+
+  /**
+   * Generate a PKCS#12 bundle for the provided certificate and chain.
+   *
+   * @param {string} certificate - Leaf certificate in PEM format.
+   * @param {string} chain - PEM encoded certificate chain.
+   * @param {string} password - Encryption password for the bundle.
+   * @returns {string} Base64 encoded PKCS#12 archive.
+   */
+  getPkcs12Bundle(certificate, chain, password) {
+    if (!password || password.length < 4) {
+      throw new Error('Password required for PKCS#12 export (minimum 4 characters)');
+    }
+    const leaf = forge.pki.certificateFromPem(certificate);
+    const caCerts = [];
+    if (chain) {
+      const blocks = forge.pem.decode(chain);
+      blocks.forEach((block) => {
+        if (block.type === 'CERTIFICATE') {
+          caCerts.push(forge.pki.certificateFromPem(forge.pem.encode(block)));
+        }
+      });
+    }
+    const pkcs12Asn1 = forge.pkcs12.toPkcs12Asn1(
+      this.#private.keypair.privateKey,
+      leaf,
+      password,
+      { algorithm: 'aes256', usePBKDF2: true, ca: caCerts },
+    );
+    const der = forge.asn1.toDer(pkcs12Asn1).getBytes();
+    return Buffer.from(der, 'binary').toString('base64');
+  }
 };

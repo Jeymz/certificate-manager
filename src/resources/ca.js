@@ -39,6 +39,10 @@ module.exports = class CA {
           path.join(base, `${intermediate}.key.pem`),
           'utf-8',
         );
+        this.#private.rootCert = await fs.readFile(
+          path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
+          'utf-8',
+        );
       } else {
         this.#private.caCert = await fs.readFile(
           path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
@@ -48,6 +52,7 @@ module.exports = class CA {
           path.join(this.#private.store.root, 'private', 'ca.key.pem'),
           'utf-8',
         );
+        this.#private.rootCert = this.#private.caCert;
       }
       return this;
     })();
@@ -96,6 +101,18 @@ module.exports = class CA {
    * @returns {string} Signing CA certificate in PEM format.
    */
   getCACertificate() {
+    return this.#private.caCert;
+  }
+
+  /**
+   * Retrieve the full certificate chain for this CA.
+   *
+   * @returns {string} PEM encoded certificate chain.
+   */
+  getCertChain() {
+    if (this.#private.store.intermediate) {
+      return `${this.#private.caCert}${this.#private.rootCert}`;
+    }
     return this.#private.caCert;
   }
 

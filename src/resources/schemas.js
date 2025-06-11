@@ -20,6 +20,14 @@ module.exports = {
         type: 'string',
         minLength: 1,
       },
+      bundleP12: {
+        type: 'boolean',
+      },
+      password: {
+        type: 'string',
+        minLength: 4,
+        maxLength: 128,
+      },
     },
     required: [
       'hostname',
