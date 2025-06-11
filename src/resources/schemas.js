@@ -26,4 +26,28 @@ module.exports = {
       'passphrase',
     ],
   },
+  intermediate: {
+    id: '/intermediate',
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      hostname: {
+        type: 'string',
+        minLength: 6,
+      },
+      passphrase: {
+        type: 'string',
+        minLength: 1,
+      },
+      intermediatePassphrase: {
+        type: 'string',
+        minLength: 1,
+      },
+    },
+    required: [
+      'hostname',
+      'passphrase',
+      'intermediatePassphrase',
+    ],
+  },
 };

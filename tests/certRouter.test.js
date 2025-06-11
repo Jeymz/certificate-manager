@@ -59,7 +59,8 @@ describe('certRouter', () => {
     controller.newIntermediateCA.mockResolvedValue({ ok: true });
     const res = await request(app)
       .post('/intermediate')
-      .send({ hostname: 'intermediate.example.com', passphrase: 'p' });
+      .send({ hostname: 'intermediate.example.com', passphrase: 'p', intermediatePassphrase: 'int' });
     expect(res.body).toEqual({ ok: true });
+    expect(controller.newIntermediateCA).toHaveBeenCalledWith('intermediate.example.com', 'p', 'int');
   });
 });

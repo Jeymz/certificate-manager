@@ -75,7 +75,19 @@ module.exports = class CA {
    * @returns {void}
    */
   unlockCA(passphrase) {
-    this.#private.caKey = forge.pki.decryptRsaPrivateKey(this.#private.lockedKey, passphrase);
+    let key = forge.pki.decryptRsaPrivateKey(this.#private.lockedKey, passphrase);
+    if (!key) {
+      try {
+        const info = forge.pki.decryptPrivateKeyInfo(
+          forge.pki.encryptedPrivateKeyFromPem(this.#private.lockedKey),
+          passphrase,
+        );
+        key = forge.pki.privateKeyFromAsn1(info);
+      } catch (err) {
+        logger.error(`Failed to decrypt CA key: ${err.message}`);
+      }
+    }
+    this.#private.caKey = key;
   }
 
   /**
