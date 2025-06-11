@@ -46,12 +46,16 @@ router.post('/intermediate', async(req, res) => {
       return res.status(400).send({ error: 'Invalid request body' });
     }
     const validator = config.getValidator();
-    if (!validator.validateSchema('new', req.body)) {
+    if (!validator.validateSchema('intermediate', req.body)) {
       logger.error('Invalid request body: schema validation failed');
       return res.status(400).send({ error: 'Invalid request body: schema validation failed' });
     }
-    const { hostname, passphrase } = req.body;
-    const ca = await controller.newIntermediateCA(hostname, passphrase);
+    const {
+      hostname,
+      passphrase,
+      intermediatePassphrase,
+    } = req.body;
+    const ca = await controller.newIntermediateCA(hostname, passphrase, intermediatePassphrase);
     return res.send(ca);
   } catch (err) {
     logger.error(`Error creating intermediate CA: ${err.message}`);

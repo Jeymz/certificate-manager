@@ -1,5 +1,12 @@
 jest.mock('../src/resources/certificateRequest');
 jest.mock('../src/resources/ca');
+jest.mock('crypto', () => {
+  const actual = jest.requireActual('crypto');
+  return {
+    ...actual,
+    generateKeyPair: jest.fn((type, opts, cb) => cb(null, 'pub', 'priv')),
+  };
+});
 
 const CertificateRequest = require('../src/resources/certificateRequest');
 const CA = require('../src/resources/ca');
@@ -41,7 +48,7 @@ describe('certController', () => {
     const fs = require('fs');
     jest.spyOn(fs.promises, 'mkdir').mockResolvedValue();
     jest.spyOn(fs.promises, 'writeFile').mockResolvedValue();
-    const result = await controller.newIntermediateCA('intermediate.example.com', 'pass');
+    const result = await controller.newIntermediateCA('intermediate.example.com', 'pass', 'intpass');
     expect(result).toEqual({ certificate: 'cert', privateKey: 'priv', hostname: 'intermediate.example.com' });
     expect(fs.promises.writeFile).toHaveBeenCalled();
     fs.promises.mkdir.mockRestore();

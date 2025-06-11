@@ -39,5 +39,16 @@
     "markdownlint-cli": "^0.45.0",
     "nodemon": "^3.1.10",
     "supertest": "^6.3.3"
+  },
+  "nodemonConfig": {
+    "watch": [
+      "server.js",
+      "src",
+      "config"
+    ],
+    "ext": "js,json",
+    "env": {
+      "NODE_ENV": "development"
+    }
   }
 }

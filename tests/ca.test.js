@@ -2,6 +2,9 @@ jest.mock('fs');
 jest.mock('node-forge', () => ({
   pki: {
     decryptRsaPrivateKey: jest.fn(() => 'unlocked'),
+    encryptedPrivateKeyFromPem: jest.fn(() => 'encInfo'),
+    decryptPrivateKeyInfo: jest.fn(() => 'decInfo'),
+    privateKeyFromAsn1: jest.fn(() => 'unlocked'),
     certificationRequestFromPem: jest.fn(() => ({ verify: () => true, subject: { attributes: [] }, attributes: [] })),
     certificateFromPem: jest.fn(() => ({ subject: { attributes: [] } })),
     createCertificate: jest.fn(() => ({
@@ -73,6 +76,15 @@ describe('CA resource', () => {
     const ca = await new CA();
     ca.unlockCA('pass');
     expect(require('node-forge').pki.decryptRsaPrivateKey).toHaveBeenCalled();
+  });
+
+  test('unlockCA falls back to pkcs8 decrypt', async() => {
+    const forge = require('node-forge');
+    forge.pki.decryptRsaPrivateKey.mockReturnValueOnce(null);
+    const ca = await new CA();
+    ca.unlockCA('pass');
+    expect(forge.pki.decryptPrivateKeyInfo).toHaveBeenCalled();
+    expect(forge.pki.privateKeyFromAsn1).toHaveBeenCalled();
   });
 
   test('signCSR requires unlocked key', async() => {

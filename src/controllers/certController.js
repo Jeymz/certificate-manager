@@ -1,5 +1,6 @@
 const fs = require('fs').promises;
 const path = require('path');
+const crypto = require('crypto');
 const CertificateRequest = require('../resources/certificateRequest');
 const CA = require('../resources/ca');
 const config = require('../resources/config')();
@@ -45,8 +46,31 @@ module.exports = {
    * @param {string} passphrase - Passphrase to unlock the root CA key.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  newIntermediateCA: async(hostname, passphrase) => {
-    const csr = new CertificateRequest(hostname);
+  newIntermediateCA: async(hostname, passphrase, intermediatePassphrase) => {
+    const options = {
+      modulusLength: 4096,
+      publicKeyEncoding: { type: 'spki', format: 'pem' },
+      privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
+    };
+    if (intermediatePassphrase) {
+      options.privateKeyEncoding.cipher = 'aes-256-cbc';
+      options.privateKeyEncoding.passphrase = intermediatePassphrase;
+    }
+    const keypair = await new Promise((resolve, reject) => {
+      crypto.generateKeyPair('rsa', options, (err, publicKey, privateKey) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ publicKey, privateKey });
+        }
+      });
+    });
+
+    const csr = new CertificateRequest(hostname, {
+      publicKey: keypair.publicKey,
+      privateKeyPEM: keypair.privateKey,
+      passphrase: intermediatePassphrase,
+    });
     csr.setCertType('intermediateCA');
     csr.sign();
     if (!csr.verify()) {
@@ -55,7 +79,7 @@ module.exports = {
     const ca = await new CA();
     ca.unlockCA(passphrase);
     const certificate = await ca.signCSR(csr);
-    const privateKey = csr.getPrivateKey();
+    const privateKey = keypair.privateKey;
     const intDir = path.join(config.getStoreDirectory(), 'intermediates');
     await fs.mkdir(intDir, { recursive: true });
     await fs.writeFile(path.join(intDir, `${hostname}.cert.crt`), certificate, { encoding: 'utf-8' });
