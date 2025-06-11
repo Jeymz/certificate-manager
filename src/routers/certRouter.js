@@ -29,9 +29,17 @@ router.post('/new', async(req, res) => {
       hostname,
       altNames,
       passphrase,
+      bundleP12,
+      password,
     } = req.body;
-    
-    const newCert = await controller.newWebServerCertificate(hostname, passphrase, altNames);
+
+    const newCert = await controller.newWebServerCertificate(
+      hostname,
+      passphrase,
+      altNames,
+      bundleP12,
+      password,
+    );
     return res.send(newCert);
   } catch (err) {
     logger.error(`Error creating certificate: ${err.message}`);

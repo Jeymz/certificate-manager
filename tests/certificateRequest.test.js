@@ -13,8 +13,18 @@ jest.mock('node-forge', () => {
       publicKeyFromPem: jest.fn(),
       certificationRequestToPem: jest.fn(() => 'csrPem'),
       privateKeyToPem: jest.fn(() => 'privPem'),
+      certificateFromPem: jest.fn(() => 'certObj'),
+      decryptRsaPrivateKey: jest.fn(() => 'unlocked'),
+      encryptedPrivateKeyFromPem: jest.fn(() => 'encInfo'),
+      decryptPrivateKeyInfo: jest.fn(() => 'decInfo'),
+      privateKeyFromAsn1: jest.fn(() => 'unlocked'),
+      privateKeyFromPem: jest.fn(() => 'pemKey'),
     },
-    asn1: { Type: { UTF8: 'utf8' } },
+    pkcs12: { toPkcs12Asn1: jest.fn(() => 'asn1') },
+    asn1: {
+      Type: { UTF8: 'utf8' },
+      toDer: jest.fn(() => ({ getBytes: jest.fn(() => 'bytes') })),
+    },
     __mockCsr: mockCsr,
   };
 });
@@ -25,6 +35,13 @@ describe('certificateRequest', () => {
   test('hostname stored lowercase', () => {
     const req = new CertificateRequest('Foo.EXAMPLE.com');
     expect(req.getHostname()).toBe('foo.example.com');
+  });
+
+  test('constructor decrypts provided key', () => {
+    const req = new CertificateRequest('foo.example.com', { publicKey: 'pub', privateKeyPEM: 'privPem', passphrase: 'pass' });
+    expect(req.getPrivateKey()).toBe('privPem');
+    const forge = require('node-forge');
+    expect(forge.pki.decryptRsaPrivateKey).toHaveBeenCalled();
   });
 
   test('constructor rejects invalid hostname', () => {
@@ -84,5 +101,13 @@ describe('certificateRequest', () => {
       { type: 2, value: 'bar.example.com' },
       { type: 7, ip: '10.0.0.1' },
     ]);
+  });
+
+  test('getPkcs12Bundle returns base64 string', () => {
+    const forge = require('node-forge');
+    const req = new CertificateRequest('foo.example.com');
+    const result = req.getPkcs12Bundle('certPem', 'chainPem', 'pass');
+    expect(forge.pkcs12.toPkcs12Asn1).toHaveBeenCalled();
+    expect(typeof result).toBe('string');
   });
 });

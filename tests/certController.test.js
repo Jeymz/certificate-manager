@@ -24,17 +24,19 @@ describe('certController', () => {
       getPrivateKey: jest.fn(() => 'priv'),
       getHostname: jest.fn(() => 'foo.example.com'),
       getCertType: jest.fn(() => 'webServer'),
+      getPkcs12Bundle: jest.fn(() => 'p12data'),
     }));
     CA.mockImplementation(() => ({
       unlockCA: jest.fn(),
       signCSR: jest.fn(() => 'cert'),
       getCACertificate: jest.fn(() => 'caCert'),
+      getCertChain: jest.fn(() => 'caCertroot'),
     }));
   });
 
   test('newWebServerCertificate returns data', async() => {
     const result = await controller.newWebServerCertificate('foo.example.com', 'pass');
-    expect(result).toEqual({ certificate: 'cert', privateKey: 'priv', hostname: 'foo.example.com', chain: 'certcaCert' });
+    expect(result).toEqual({ certificate: 'cert', privateKey: 'priv', hostname: 'foo.example.com', chain: 'certcaCertroot' });
     expect(CA).toHaveBeenCalledWith('intermediate');
   });
 
@@ -42,6 +44,12 @@ describe('certController', () => {
     await controller.newWebServerCertificate('foo.example.com', 'pass', ['alt.example.com']);
     expect(CertificateRequest).toHaveBeenCalledWith('foo.example.com');
     expect(CertificateRequest.mock.results[0].value.addAltNames).toHaveBeenCalledWith(['alt.example.com']);
+  });
+
+  test('p12 bundle returned when requested', async() => {
+    const result = await controller.newWebServerCertificate('foo.example.com', 'pass', false, true, 'p12pass');
+    expect(result.p12).toBe('p12data');
+    expect(CertificateRequest.mock.results[0].value.getPkcs12Bundle).toHaveBeenCalledWith('cert', 'caCertroot', 'p12pass');
   });
 
   test('newIntermediateCA writes files', async() => {

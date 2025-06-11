@@ -14,7 +14,7 @@ module.exports = {
    * @param {string[]|false} [altNames=false] - Optional alternative names.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  newWebServerCertificate: async(hostname, passphrase, altNames = false) => {
+  newWebServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null) => {
     const csr = new CertificateRequest(hostname);
     if (altNames && altNames.length > 0) {
       csr.addAltNames(altNames);
@@ -28,15 +28,20 @@ module.exports = {
     const ca = await new CA(config.getDefaultIntermediate());
     ca.unlockCA(passphrase);
     const certificate = await ca.signCSR(csr);
-    const caCert = ca.getCACertificate();
+    const caChain = ca.getCertChain();
     const privateKey = csr.getPrivateKey();
-    const chain = `${certificate}${caCert}`;
-    return {
+    const chain = `${certificate}${caChain}`;
+    const result = {
       certificate,
       privateKey,
       hostname,
       chain,
     };
+    if (bundleP12) {
+      const bundlePass = password || passphrase;
+      result.p12 = csr.getPkcs12Bundle(certificate, caChain, bundlePass);
+    }
+    return result;
   },
 
   /**
