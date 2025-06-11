@@ -6,6 +6,7 @@ module.exports = {
     properties: {
       hostname: {
         type: 'string',
+        pattern: /^[a-zA-Z0-9._-]+$/,
         minLength: 6,
       },
       altNames: {
@@ -41,6 +42,7 @@ module.exports = {
     properties: {
       hostname: {
         type: 'string',
+        pattern: /^[a-zA-Z0-9._-]+$/,
         minLength: 6,
       },
       passphrase: {

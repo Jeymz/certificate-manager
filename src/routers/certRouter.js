@@ -40,7 +40,7 @@ router.post('/new', async(req, res) => {
       bundleP12,
       password,
     );
-    return res.send(newCert);
+    return res.status(200).json(newCert);
   } catch (err) {
     logger.error(`Error creating certificate: ${err.message}`);
     return res.status(400).send({ error: 'Unable to process request' });
@@ -63,8 +63,9 @@ router.post('/intermediate', async(req, res) => {
       passphrase,
       intermediatePassphrase,
     } = req.body;
+    // deepcode ignore PT: The hostname is validated by the schema on line 57
     const ca = await controller.newIntermediateCA(hostname, passphrase, intermediatePassphrase);
-    return res.send(ca);
+    return res.status(200).json(ca);
   } catch (err) {
     logger.error(`Error creating intermediate CA: ${err.message}`);
     return res.status(400).send({ error: 'Unable to process request' });

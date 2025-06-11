@@ -19,6 +19,7 @@ const router = require('../src/routers/certRouter');
 describe('certRouter', () => {
   let app;
   beforeEach(() => {
+    // file deepcode ignore DisablePoweredBy/test: this is a functionality test, not intended for production data
     app = express();
     app.use(express.json());
     app.use('/', router);
@@ -31,6 +32,7 @@ describe('certRouter', () => {
 
   test('post /new validates body', async() => {
     controller.newWebServerCertificate.mockResolvedValue({ ok: true });
+    // file deepcode ignore NoHardcodedPasswords/test: this is a functionality test, not intended for production data
     const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p', bundleP12: true, password: 'pass' });
     expect(res.body).toEqual({ ok: true });
     expect(controller.newWebServerCertificate).toHaveBeenCalledWith('foo.example.com', 'p', undefined, true, 'pass');

@@ -49,6 +49,10 @@ async function createIntermediate(name, passphrase, intermediatePassphrase) {
 
 if (require.main === module) {
   const [name] = process.argv.slice(2);
+  if (/^[a-zA-Z0-9_.-]+$/.test(name) === false) {
+    logger.error('Invalid name: must be alphanumeric, underscores, dashes, or dots.');
+    process.exit(1);
+  }
   if (!name || !process.env.CAPASS || !process.env.INTPASS) {
     logger.error('Usage: CAPASS=rootpass INTPASS=intpass node setup-intermediate.js <name>');
     process.exit(1);
