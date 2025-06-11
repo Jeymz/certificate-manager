@@ -100,6 +100,9 @@ async function createCA() {
   await fs.writeFile(path.join(config.getStoreDirectory(), 'log.json'), JSON.stringify({
     requests: [],
   }), { encoding: 'utf-8' });
+  await fs.writeFile(path.join(config.getStoreDirectory(), 'revoked.json'), JSON.stringify({
+    certs: [],
+  }), { encoding: 'utf-8' });
   await fs.writeFile(path.join(config.getStoreDirectory(), 'serial'), '1000000', { encoding: 'utf-8' });
   logger.info('CA created successfully.');
 }

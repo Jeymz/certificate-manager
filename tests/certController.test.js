@@ -1,5 +1,6 @@
 jest.mock('../src/resources/certificateRequest');
 jest.mock('../src/resources/ca');
+jest.mock('../src/resources/revocation');
 jest.mock('crypto', () => {
   const actual = jest.requireActual('crypto');
   return {
@@ -10,6 +11,7 @@ jest.mock('crypto', () => {
 
 const CertificateRequest = require('../src/resources/certificateRequest');
 const CA = require('../src/resources/ca');
+const revocation = require('../src/resources/revocation');
 const controller = require('../src/controllers/certController');
 
 describe('certController', () => {
@@ -32,6 +34,8 @@ describe('certController', () => {
       getCACertificate: jest.fn(() => 'caCert'),
       getCertChain: jest.fn(() => 'caCertroot'),
     }));
+    revocation.revoke.mockReset();
+    revocation.getRevoked.mockReset();
   });
 
   test('newWebServerCertificate returns data', async() => {
@@ -61,5 +65,24 @@ describe('certController', () => {
     expect(fs.promises.writeFile).toHaveBeenCalled();
     fs.promises.mkdir.mockRestore();
     fs.promises.writeFile.mockRestore();
+  });
+
+  test('revokeCertificate returns success', async() => {
+    revocation.revoke.mockResolvedValue({});
+    const result = await controller.revokeCertificate('1', 'KeyCompromise');
+    expect(result).toEqual({ revoked: true });
+    expect(revocation.revoke).toHaveBeenCalledWith('1', 'KeyCompromise');
+  });
+
+  test('revokeCertificate handles missing serial', async() => {
+    revocation.revoke.mockResolvedValue(null);
+    const result = await controller.revokeCertificate('99');
+    expect(result).toEqual({ error: 'Serial not found' });
+  });
+
+  test('getCRL returns revoked list', async() => {
+    revocation.getRevoked.mockResolvedValue([{ serialNumber: '1' }]);
+    const result = await controller.getCRL();
+    expect(result).toEqual({ revoked: [{ serialNumber: '1' }] });
   });
 });

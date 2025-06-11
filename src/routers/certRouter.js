@@ -72,6 +72,39 @@ router.post('/intermediate', async(req, res) => {
   }
 });
 
+router.post('/revoke', async(req, res) => {
+  try {
+    if (!req.body || typeof req.body !== 'object') {
+      logger.error('Invalid request body: must be an object');
+      return res.status(400).send({ error: 'Invalid request body' });
+    }
+    const validator = config.getValidator();
+    if (!validator.validateSchema('revoke', req.body)) {
+      logger.error('Invalid request body: schema validation failed');
+      return res.status(400).send({ error: 'Invalid request body: schema validation failed' });
+    }
+    const { serialNumber, reason } = req.body;
+    const result = await controller.revokeCertificate(serialNumber, reason);
+    if (result.error) {
+      return res.status(404).send(result);
+    }
+    return res.status(200).json(result);
+  } catch (err) {
+    logger.error(`Error revoking certificate: ${err.message}`);
+    return res.status(400).send({ error: 'Unable to process request' });
+  }
+});
+
+router.get('/crl', async(req, res) => {
+  try {
+    const list = await controller.getCRL();
+    return res.status(200).json(list);
+  } catch (err) {
+    logger.error(`Error retrieving CRL: ${err.message}`);
+    return res.status(400).send({ error: 'Unable to process request' });
+  }
+});
+
 router.get('/', (req, res) => {
   if (config.isInitialized() === true) {
     return res.send('Ready');

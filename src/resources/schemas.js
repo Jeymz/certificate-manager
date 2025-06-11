@@ -60,4 +60,19 @@ module.exports = {
       'intermediatePassphrase',
     ],
   },
+  revoke: {
+    id: '/revoke',
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      serialNumber: {
+        type: 'string',
+        pattern: /^\d+$/,
+      },
+      reason: {
+        type: 'string',
+      },
+    },
+    required: ['serialNumber'],
+  },
 };
