@@ -4,8 +4,6 @@ module.exports = {
   coveragePathIgnorePatterns: [
     '<rootDir>/src/utils/logger.js',
     '<rootDir>/scripts/',
-    '<rootDir>/src/resources/revocation.js',
-    '<rootDir>/src/routers/certRouter.js',
   ],
   coverageThreshold: {
     global: {

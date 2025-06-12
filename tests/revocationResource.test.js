@@ -34,4 +34,31 @@ describe('revocation resource', () => {
     const result = await revocation.getRevoked();
     expect(result).toEqual([{ serialNumber: '1', hostname: 'host', expiration: 'exp', revoked: true }]);
   });
+
+  test('handles readFile failure gracefully', async() => {
+    fs.promises.readFile.mockRejectedValueOnce(new Error('fail'));
+    const result = await revocation.getRevoked();
+    expect(result).toEqual([]);
+  });
+
+  test('handles parse failure gracefully', async() => {
+    fs.promises.readFile.mockResolvedValueOnce('bad');
+    const result = await revocation.getRevoked();
+    expect(result).toEqual([]);
+  });
+
+  test('revoke updates existing entry', async() => {
+    fs.promises.readFile.mockResolvedValueOnce('{"certs":[{"serialNumber":"1","hostname":"host","expiration":"exp","revoked":false}]}');
+    const result = await revocation.revoke('1', 'reason');
+    expect(result.revoked).toBe(true);
+    expect(result.reason).toBe('reason');
+    expect(fs.promises.writeFile).toHaveBeenCalled();
+  });
+
+  test('revoke ignores already revoked entry', async() => {
+    fs.promises.readFile.mockResolvedValueOnce('{"certs":[{"serialNumber":"1","hostname":"host","expiration":"exp","revoked":true}]}');
+    const result = await revocation.revoke('1');
+    expect(result.revoked).toBe(true);
+    expect(fs.promises.writeFile).not.toHaveBeenCalled();
+  });
 });

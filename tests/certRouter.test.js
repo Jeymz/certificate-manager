@@ -34,6 +34,12 @@ describe('certRouter', () => {
     expect(res.text).toBe('Ready');
   });
 
+  test('root reports awaiting setup when not initialized', async() => {
+    mockConfig.isInitialized.mockReturnValueOnce(false);
+    const res = await request(app).get('/');
+    expect(res.text).toBe('Awaiting Setup');
+  });
+
   test('post /new validates body', async() => {
     controller.newWebServerCertificate.mockResolvedValue({ ok: true });
     // file deepcode ignore NoHardcodedPasswords/test: this is a functionality test, not intended for production data
@@ -47,6 +53,14 @@ describe('certRouter', () => {
     const invalid = await request(app)
       .post('/new')
       .send({ invalid: true });
+    expect(invalid.status).toBe(400);
+  });
+
+  test('post /new rejects non-object body', async() => {
+    const invalid = await request(app)
+      .post('/new')
+      .set('Content-Type', 'application/json')
+      .send('"bad"');
     expect(invalid.status).toBe(400);
   });
 
@@ -71,6 +85,27 @@ describe('certRouter', () => {
     expect(controller.newIntermediateCA).toHaveBeenCalledWith('intermediate.example.com', 'p', 'int');
   });
 
+  test('post /intermediate rejects non-object body', async() => {
+    const res = await request(app)
+      .post('/intermediate')
+      .set('Content-Type', 'application/json')
+      .send('"bad"');
+    expect(res.status).toBe(400);
+  });
+
+  test('post /intermediate rejects invalid body', async() => {
+    mockConfig.getValidator.mockReturnValueOnce({ validateSchema: jest.fn(() => false) });
+    const res = await request(app).post('/intermediate').send({});
+    expect(res.status).toBe(400);
+  });
+
+  test('post /intermediate handles controller error', async() => {
+    controller.newIntermediateCA.mockImplementation(() => { throw new Error('fail'); });
+    const res = await request(app).post('/intermediate').send({ hostname: 'i', passphrase: 'p' });
+    expect(res.status).toBe(400);
+    expect(logger.error).toHaveBeenCalled();
+  });
+
   test('post /revoke forwards to controller', async() => {
     controller.revokeCertificate.mockResolvedValue({ revoked: true });
     const res = await request(app)
@@ -78,6 +113,27 @@ describe('certRouter', () => {
       .send({ serialNumber: '1', reason: 'KeyCompromise' });
     expect(res.body).toEqual({ revoked: true });
     expect(controller.revokeCertificate).toHaveBeenCalledWith('1', 'KeyCompromise');
+  });
+
+  test('post /revoke rejects non-object body', async() => {
+    const res = await request(app)
+      .post('/revoke')
+      .set('Content-Type', 'application/json')
+      .send('"bad"');
+    expect(res.status).toBe(400);
+  });
+
+  test('post /revoke rejects invalid body', async() => {
+    mockConfig.getValidator.mockReturnValueOnce({ validateSchema: jest.fn(() => false) });
+    const res = await request(app).post('/revoke').send({});
+    expect(res.status).toBe(400);
+  });
+
+  test('post /revoke handles controller error', async() => {
+    controller.revokeCertificate.mockImplementation(() => { throw new Error('fail'); });
+    const res = await request(app).post('/revoke').send({ serialNumber: '1' });
+    expect(res.status).toBe(400);
+    expect(logger.error).toHaveBeenCalled();
   });
 
   test('post /revoke returns 404 when not found', async() => {
@@ -92,5 +148,12 @@ describe('certRouter', () => {
     controller.getCRL.mockResolvedValue({ revoked: [] });
     const res = await request(app).get('/crl');
     expect(res.body).toEqual({ revoked: [] });
+  });
+
+  test('get /crl handles errors', async() => {
+    controller.getCRL.mockImplementation(() => { throw new Error('fail'); });
+    const res = await request(app).get('/crl');
+    expect(res.status).toBe(400);
+    expect(logger.error).toHaveBeenCalled();
   });
 });
