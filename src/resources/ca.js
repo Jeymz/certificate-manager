@@ -137,27 +137,20 @@ module.exports = class CA {
     const newCert = forge.pki.createCertificate();
     const serial = await this.getSerial();
     newCert.serialNumber = parseInt(serial, 10).toString(16);
-    const certFilename = `${CSR.getHostname()}.cert.crt`;
-    const requestFilename = `${CSR.getHostname()}.request.pem`;
-    const privateKeyFilename = `${CSR.getHostname()}.key.pem`;
     const expiration = new Date();
     expiration.setFullYear(expiration.getFullYear() + 1);
-    const certPath = path.join(this.#private.store.certs, certFilename);
-    const csrPath = path.join(this.#private.store.requests, requestFilename);
-    const privateKeyPath = path.join(this.#private.store.root, 'private', privateKeyFilename);
     newCert.validity.notBefore = new Date();
     newCert.validity.notAfter = expiration;
     newCert.setSubject(csr.subject.attributes);
     const extensionConfigs = config.getCertExtensions();
     const extensions = extensionConfigs[CSR.getCertType()];
-    if (csr.attributes.length === 3) {
-      if (csr.attributes[csr.attributes.length - 1].name === 'extensionRequest') {
-        csr.attributes[csr.attributes.length - 1].extensions.forEach((extensionRequest) => {
-          if (extensionRequest.name === 'subjectAltName') {
-            extensions.push(extensionRequest);
-          }
-        });
-      }
+    const extReq = csr.attributes.find((a) => a.name === 'extensionRequest');
+    if (extReq) {
+      extReq.extensions.forEach((extensionRequest) => {
+        if (extensionRequest.name === 'subjectAltName') {
+          extensions.push(extensionRequest);
+        }
+      });
     }
     newCert.setIssuer(caCert.subject.attributes);
     newCert.publicKey = csr.publicKey;
@@ -165,32 +158,7 @@ module.exports = class CA {
     newCert.setExtensions(extensions);
     newCert.sign(caKey, forge.md.sha256.create());
     const certPem = forge.pki.certificateToPem(newCert);
-    await fs.writeFile(
-      certPath,
-      certPem,
-      { encoding: 'utf-8' },
-    );
-    if (this.#private.store.intermediate) {
-      const chainPath = path.join(
-        this.#private.store.certs,
-        `${CSR.getHostname()}.chain.crt`,
-      );
-      const chainPem = `${certPem}${this.#private.caCert}`;
-      await fs.writeFile(chainPath, chainPem, { encoding: 'utf-8' });
-    }
-    await fs.writeFile(
-      csrPath,
-      CSR.getCSR(),
-      { encoding: 'utf-8' },
-    );
-    await fs.writeFile(
-      privateKeyPath,
-      CSR.getPrivateKey(),
-      { encoding: 'utf-8' },
-    );
-    await revocation.add(serial, CSR.getHostname(), expiration.toISOString());
-    await this.updateLog(csrPath, certPath, privateKeyPath, expiration, CSR.getHostname());
-    return forge.pki.certificateToPem(newCert);
+    return { certificate: certPem, serial, expiration };
   }
 
   /**

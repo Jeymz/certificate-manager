@@ -3,7 +3,12 @@ const configFactory = require('../src/resources/config');
 describe('config resource', () => {
   test('getServerConfig returns server config', () => {
     const config = configFactory();
-    expect(config.getServerConfig()).toEqual({ port: 3000 });
+    expect(config.getServerConfig()).toEqual({
+      port: 3000,
+      protocol: 'https',
+      key: './ssl/server.key',
+      cert: './ssl/server.crt',
+    });
   });
 
   test('isInitialized returns false without files', () => {

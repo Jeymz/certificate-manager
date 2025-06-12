@@ -3,6 +3,7 @@ const path = require('path');
 const crypto = require('crypto');
 const CertificateRequest = require('../resources/certificateRequest');
 const CA = require('../resources/ca');
+const revocation = require('../resources/revocation');
 const config = require('../resources/config')();
 
 module.exports = {
@@ -29,9 +30,25 @@ module.exports = {
     }
     const ca = await new CA(config.getDefaultIntermediate());
     ca.unlockCA(passphrase);
-    const certificate = await ca.signCSR(csr);
-    const caChain = ca.getCertChain();
+    const { certificate, serial, expiration } = await ca.signCSR(csr);
+
+    const store = config.getStoreDirectory();
+    const certPath = path.join(store, 'newCerts', `${hostname}.cert.crt`);
+    const csrPath = path.join(store, 'requests', `${hostname}.request.pem`);
+    const privateKeyPath = path.join(store, 'private', `${hostname}.key.pem`);
+    await fs.writeFile(certPath, certificate, { encoding: 'utf-8' });
+    if (config.getDefaultIntermediate()) {
+      const chainPem = `${certificate}${ca.getCACertificate()}`;
+      await fs.writeFile(path.join(store, 'newCerts', `${hostname}.chain.crt`), chainPem, { encoding: 'utf-8' });
+    }
+    await fs.writeFile(csrPath, csr.getCSR(), { encoding: 'utf-8' });
     const privateKey = csr.getPrivateKey();
+    await fs.writeFile(privateKeyPath, privateKey, { encoding: 'utf-8' });
+
+    await revocation.add(serial, hostname, expiration.toISOString());
+    await ca.updateLog(csrPath, certPath, privateKeyPath, expiration, hostname);
+
+    const caChain = ca.getCertChain();
     const chain = `${certificate}${caChain}`;
     const result = {
       certificate,
@@ -86,7 +103,7 @@ module.exports = {
     }
     const ca = await new CA();
     ca.unlockCA(passphrase);
-    const certificate = await ca.signCSR(csr);
+    const { certificate } = await ca.signCSR(csr);
     const privateKey = keypair.privateKey;
     const intDir = path.join(config.getStoreDirectory(), 'intermediates');
     await fs.mkdir(intDir, { recursive: true });
