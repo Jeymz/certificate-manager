@@ -18,6 +18,7 @@ jest.mock('node-forge', () => ({
   },
   md: { sha256: { create: jest.fn() } },
 }));
+jest.mock('../src/utils/logger', () => ({ error: jest.fn(), debug: jest.fn(), info: jest.fn() }));
 
 const path = require('path');
 let fs;
@@ -87,12 +88,57 @@ describe('CA resource', () => {
     expect(forge.pki.privateKeyFromAsn1).toHaveBeenCalled();
   });
 
+  test('unlockCA logs error when pkcs8 decrypt fails', async() => {
+    const forge = require('node-forge');
+    const logger = require('../src/utils/logger');
+    forge.pki.decryptRsaPrivateKey.mockReturnValueOnce(null);
+    forge.pki.decryptPrivateKeyInfo.mockImplementationOnce(() => { throw new Error('fail'); });
+    const ca = await new CA();
+    ca.unlockCA('pass');
+    expect(logger.error).toHaveBeenCalled();
+  });
+
   test('signCSR requires unlocked key', async() => {
     const ca = await new CA();
-    const csr = { getCSR: () => 'csr', getHostname: () => 'foo.example.com', getCertType: () => 'webServer', getPrivateKey: () => 'priv' };
+    const csr = { getCSR: () => 'csr', getHostname: () => 'foo.example.com', getCertType: () => 'webServer', getPrivateKey: () => 'priv', attributes: [] };
     await expect(ca.signCSR(csr)).rejects.toThrow();
     ca.unlockCA('pass');
-    await expect(ca.signCSR(csr)).resolves.toBe('signedCert');
+    const result = await ca.signCSR(csr);
+    expect(result.certificate).toBe('signedCert');
+    expect(typeof result.serial).toBe('string');
+    expect(result.expiration instanceof Date).toBe(true);
+  });
+
+  test('signCSR merges alt names', async() => {
+    const ca = await new CA();
+    ca.unlockCA('pass');
+    const csr = {
+      getCSR: () => 'csr',
+      getHostname: () => 'foo.example.com',
+      getCertType: () => 'webServer',
+      getPrivateKey: () => 'priv',
+    };
+    const forge = require('node-forge');
+    forge.pki.certificationRequestFromPem.mockReturnValueOnce({
+      verify: () => true,
+      subject: { attributes: [] },
+      attributes: [{ name: 'extensionRequest', extensions: [{ name: 'subjectAltName' }] }],
+      publicKey: 'pub',
+    });
+    await ca.signCSR(csr);
+    const certObj = forge.pki.createCertificate.mock.results[0].value;
+    expect(certObj.setExtensions).toHaveBeenCalledWith(expect.arrayContaining([
+      expect.objectContaining({ name: 'subjectAltName' }),
+    ]));
+  });
+
+  test('signCSR rejects invalid CSR', async() => {
+    const ca = await new CA();
+    ca.unlockCA('pass');
+    const csr = { getCSR: () => 'csr', getHostname: () => 'foo.example.com', getCertType: () => 'webServer', getPrivateKey: () => 'priv' };
+    const forge = require('node-forge');
+    forge.pki.certificationRequestFromPem.mockReturnValueOnce({ verify: () => false });
+    await expect(ca.signCSR(csr)).rejects.toThrow('CSR verification failed');
   });
 
   test('getSerial increments serial', async() => {
@@ -112,5 +158,11 @@ describe('CA resource', () => {
     const ca = await new CA('intermediate');
     const chain = ca.getCertChain();
     expect(typeof chain).toBe('string');
+  });
+
+  test('getCertChain returns single cert when root', async() => {
+    const ca = await new CA();
+    const chain = ca.getCertChain();
+    expect(chain).toBe('dummy');
   });
 });

@@ -24,18 +24,29 @@ describe('certController', () => {
       setCertType: jest.fn(),
       verify: jest.fn(() => true),
       getPrivateKey: jest.fn(() => 'priv'),
+      getCSR: jest.fn(() => 'csr'),
       getHostname: jest.fn(() => 'foo.example.com'),
       getCertType: jest.fn(() => 'webServer'),
       getPkcs12Bundle: jest.fn(() => 'p12data'),
     }));
     CA.mockImplementation(() => ({
       unlockCA: jest.fn(),
-      signCSR: jest.fn(() => 'cert'),
+      signCSR: jest.fn(() => ({ certificate: 'cert', serial: '1', expiration: new Date() })),
       getCACertificate: jest.fn(() => 'caCert'),
       getCertChain: jest.fn(() => 'caCertroot'),
+      updateLog: jest.fn(),
     }));
+    const fs = require('fs');
+    jest.spyOn(fs.promises, 'writeFile').mockResolvedValue();
+    jest.spyOn(fs.promises, 'mkdir').mockResolvedValue();
     revocation.revoke.mockReset();
     revocation.getRevoked.mockReset();
+  });
+
+  afterEach(() => {
+    const fs = require('fs');
+    fs.promises.writeFile.mockRestore();
+    fs.promises.mkdir.mockRestore();
   });
 
   test('newWebServerCertificate returns data', async() => {
@@ -58,13 +69,9 @@ describe('certController', () => {
 
   test('newIntermediateCA writes files', async() => {
     const fs = require('fs');
-    jest.spyOn(fs.promises, 'mkdir').mockResolvedValue();
-    jest.spyOn(fs.promises, 'writeFile').mockResolvedValue();
     const result = await controller.newIntermediateCA('intermediate.example.com', 'pass', 'intpass');
     expect(result).toEqual({ certificate: 'cert', privateKey: 'priv', hostname: 'intermediate.example.com' });
     expect(fs.promises.writeFile).toHaveBeenCalled();
-    fs.promises.mkdir.mockRestore();
-    fs.promises.writeFile.mockRestore();
   });
 
   test('revokeCertificate returns success', async() => {

@@ -26,8 +26,10 @@ describe('certService', () => {
     }));
     CA.mockImplementation(() => ({
       unlockCA: jest.fn(),
-      signCSR: jest.fn(() => 'cert'),
+      signCSR: jest.fn(() => ({ certificate: 'cert', serial: '1', expiration: new Date() })),
       getCertChain: jest.fn(() => 'chain'),
+      getCACertificate: jest.fn(() => 'cacert'),
+      updateLog: jest.fn(),
     }));
   });
 

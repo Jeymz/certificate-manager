@@ -1,6 +1,9 @@
 {
   "server": {
-    "port": 3000
+    "port": 3000,
+    "protocol": "https",
+    "key": "./ssl/server.key",
+    "cert": "./ssl/server.crt"
   },
   "storeDirectory": "./files",
   "subject": {

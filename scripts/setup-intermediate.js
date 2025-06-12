@@ -37,7 +37,7 @@ async function createIntermediate(name, passphrase, intermediatePassphrase) {
   }
   const ca = await new CA();
   ca.unlockCA(passphrase);
-  const certificate = await ca.signCSR(csr);
+  const { certificate } = await ca.signCSR(csr);
   const privateKey = keypair.privateKey;
   const intDir = path.join(config.getStoreDirectory(), 'intermediates');
   await fs.mkdir(intDir, { recursive: true });
