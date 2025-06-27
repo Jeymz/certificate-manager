@@ -16,6 +16,19 @@ module.exports = {
     .newWebServerCertificate(hostname, passphrase, altNames, bundleP12, password),
 
   /**
+   * Generate and sign a new LDAP server certificate.
+   *
+   * @param {string} hostname - Fully qualified domain name for the certificate.
+   * @param {string} passphrase - Passphrase to unlock the CA key.
+   * @param {string[]|false} [altNames=false] - Optional alternative names.
+   * @param {boolean} [bundleP12=false] - Whether to bundle as PKCS#12.
+   * @param {string|null} [password=null] - Optional bundle password.
+   * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
+   */
+  newLdapServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null) => certService
+    .newLdapServerCertificate(hostname, passphrase, altNames, bundleP12, password),
+
+  /**
    * Generate and sign a new intermediate CA certificate.
    *
    * @param {string} hostname - Name for the intermediate CA.

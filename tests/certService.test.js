@@ -57,4 +57,17 @@ describe('certService', () => {
     fs.promises.mkdir.mockRestore();
     fs.promises.writeFile.mockRestore();
   });
+
+  test('newLdapServerCertificate sets ldapServer type', async() => {
+    const req = {
+      addAltNames: jest.fn(),
+      sign: jest.fn(),
+      setCertType: jest.fn(),
+      verify: jest.fn(() => false),
+    };
+    CertificateRequest.mockImplementationOnce(() => req);
+    const result = await service.newLdapServerCertificate('ldap.example.com', 'pass');
+    expect(req.setCertType).toHaveBeenCalledWith('ldapServer');
+    expect(result).toEqual({ error: 'Unable to verify CSR' });
+  });
 });

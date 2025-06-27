@@ -72,6 +72,24 @@
       { "name": "subjectKeyIdentifier" },
       { "name": "authorityKeyIdentifier" }
     ],
+    "ldapServer": [
+      {
+        "name": "basicConstraints",
+        "cA": false
+      },
+      {
+        "name": "keyUsage",
+        "digitalSignature": true,
+        "keyEncipherment": true
+      },
+      {
+        "name": "extKeyUsage",
+        "serverAuth": true,
+        "clientAuth": true
+      },
+      { "name": "subjectKeyIdentifier" },
+      { "name": "authorityKeyIdentifier" }
+    ],
     "intermediateCA": [
       {
         "name": "basicConstraints",

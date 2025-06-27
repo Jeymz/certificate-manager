@@ -35,6 +35,42 @@ module.exports = {
       'passphrase',
     ],
   },
+  ldap: {
+    id: '/ldap',
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      hostname: {
+        type: 'string',
+        pattern: /^[a-zA-Z0-9._-]+$/,
+        minLength: 6,
+      },
+      altNames: {
+        type: 'array',
+        items: {
+          type: 'string',
+          minLength: 1,
+          pattern: /^[a-zA-Z0-9.:_-]+$/,
+        },
+      },
+      passphrase: {
+        type: 'string',
+        minLength: 1,
+      },
+      bundleP12: {
+        type: 'boolean',
+      },
+      password: {
+        type: 'string',
+        minLength: 4,
+        maxLength: 128,
+      },
+    },
+    required: [
+      'hostname',
+      'passphrase',
+    ],
+  },
   intermediate: {
     id: '/intermediate',
     type: 'object',

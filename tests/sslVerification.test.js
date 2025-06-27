@@ -55,3 +55,14 @@ test('web server certificate validates with root CA', async() => {
   const verified = forge.pki.verifyCertificateChain(caStore, [serverCert, intermediateCert]);
   expect(verified).toBe(true);
 });
+
+test('ldap server certificate includes required extensions', async() => {
+  const { certificate } = await controller.newLdapServerCertificate('ldap.example.com', 'pass', ['ldap.example.com']);
+  const cert = forge.pki.certificateFromPem(certificate);
+  const eku = cert.extensions.find(e => e.name === 'extKeyUsage');
+  expect(eku.clientAuth).toBe(true);
+  expect(eku.serverAuth).toBe(true);
+  const san = cert.extensions.find(e => e.name === 'subjectAltName');
+  const dnsNames = san.altNames.filter(n => n.type === 2).map(n => n.value);
+  expect(dnsNames).toContain('ldap.example.com');
+});
