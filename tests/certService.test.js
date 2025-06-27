@@ -33,7 +33,7 @@ describe('certService', () => {
     }));
   });
 
-  test('newWebServerCertificate returns error when verify fails', async() => {
+  test('newWebServerCertificate returns an error when CSR verification fails', async() => {
     CertificateRequest.mockImplementationOnce(() => ({
       addAltNames: jest.fn(),
       sign: jest.fn(),
@@ -43,7 +43,7 @@ describe('certService', () => {
     expect(result).toEqual({ error: 'Unable to verify CSR' });
   });
 
-  test('newIntermediateCA returns error when verify fails', async() => {
+  test('newIntermediateCA returns an error when CSR verification fails', async() => {
     CertificateRequest.mockImplementationOnce(() => ({
       setCertType: jest.fn(),
       sign: jest.fn(),
@@ -58,7 +58,7 @@ describe('certService', () => {
     fs.promises.writeFile.mockRestore();
   });
 
-  test('newLdapServerCertificate sets ldapServer type', async() => {
+  test('newLdapServerCertificate sets ldapServer type and returns an error when CSR verification fails', async() => {
     const req = {
       addAltNames: jest.fn(),
       sign: jest.fn(),
