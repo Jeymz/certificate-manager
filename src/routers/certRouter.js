@@ -47,6 +47,43 @@ router.post('/new', async(req, res) => {
   }
 });
 
+router.post('/ldap', async(req, res) => {
+  try {
+    if (!req.body || typeof req.body !== 'object') {
+      logger.error('Invalid request body: must be an object');
+      return res.status(400).send({
+        error: 'Invalid request body',
+      });
+    }
+    const validator = config.getValidator();
+    if (!validator.validateSchema('ldap', req.body)) {
+      logger.error('Invalid request body: schema validation failed');
+      return res.status(400).send({
+        error: 'Invalid request body: schema validation failed',
+      });
+    }
+    const {
+      hostname,
+      altNames,
+      passphrase,
+      bundleP12,
+      password,
+    } = req.body;
+
+    const newCert = await controller.newLdapServerCertificate(
+      hostname,
+      passphrase,
+      altNames,
+      bundleP12,
+      password,
+    );
+    return res.status(200).json(newCert);
+  } catch (err) {
+    logger.error(`Error creating certificate: ${err.message}`);
+    return res.status(400).send({ error: 'Unable to process request' });
+  }
+});
+
 router.post('/intermediate', async(req, res) => {
   try {
     if (!req.body || typeof req.body !== 'object') {

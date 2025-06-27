@@ -64,6 +64,63 @@ module.exports = {
   },
 
   /**
+   * Generate and sign a new LDAP server certificate.
+   *
+   * @param {string} hostname - Fully qualified domain name for the certificate.
+   * @param {string} passphrase - Passphrase to unlock the CA key.
+   * @param {string[]|false} [altNames=false] - Optional alternative names.
+   * @param {boolean} [bundleP12=false] - Whether to bundle as PKCS#12.
+   * @param {string|null} [password=null] - Optional bundle password.
+   * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
+   */
+  async newLdapServerCertificate(hostname, passphrase, altNames = false, bundleP12 = false, password = null) {
+    const csr = new CertificateRequest(hostname);
+    csr.setCertType('ldapServer');
+    if (altNames && altNames.length > 0) {
+      csr.addAltNames(altNames);
+    }
+    csr.sign();
+    if (!csr.verify()) {
+      return {
+        error: 'Unable to verify CSR',
+      };
+    }
+    const ca = await new CA(config.getDefaultIntermediate());
+    ca.unlockCA(passphrase);
+    const { certificate, serial, expiration } = await ca.signCSR(csr);
+
+    const store = config.getStoreDirectory();
+    const certPath = path.join(store, 'newCerts', `${hostname}.cert.crt`);
+    const csrPath = path.join(store, 'requests', `${hostname}.request.pem`);
+    const privateKeyPath = path.join(store, 'private', `${hostname}.key.pem`);
+    await fs.writeFile(certPath, certificate, { encoding: 'utf-8' });
+    if (config.getDefaultIntermediate()) {
+      const chainPem = `${certificate}${ca.getCACertificate()}`;
+      await fs.writeFile(path.join(store, 'newCerts', `${hostname}.chain.crt`), chainPem, { encoding: 'utf-8' });
+    }
+    await fs.writeFile(csrPath, csr.getCSR(), { encoding: 'utf-8' });
+    const privateKey = csr.getPrivateKey();
+    await fs.writeFile(privateKeyPath, privateKey, { encoding: 'utf-8' });
+
+    await revocation.add(serial, hostname, expiration.toISOString());
+    await ca.updateLog(csrPath, certPath, privateKeyPath, expiration, hostname);
+
+    const caChain = ca.getCertChain();
+    const chain = `${certificate}${caChain}`;
+    const result = {
+      certificate,
+      privateKey,
+      hostname,
+      chain,
+    };
+    if (bundleP12) {
+      const bundlePass = password || passphrase;
+      result.p12 = csr.getPkcs12Bundle(certificate, caChain, bundlePass);
+    }
+    return result;
+  },
+
+  /**
    * Generate and sign a new intermediate CA certificate.
    *
    * @param {string} hostname - Name for the intermediate CA.

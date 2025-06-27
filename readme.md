@@ -112,9 +112,20 @@ dependency. Installation differs slightly for each case.
    }
    ```
 
-6. All your web certs will be saved to the directory specified in the config in the `newCerts` directory. Private keys are all in the `private` directory. Your Root CA cert is in the `certs` folder and will need to be applied to all machines as a Trusted Root Certificate
+6. Submit a request to `http://localhost:{{SERVER.PORT}}/ldap` to generate an LDAP server certificate
 
-7. (Optional) Create an intermediate CA by posting to `http://localhost:{{SERVER.PORT}}/intermediate` or running:
+   ```json
+   {
+     "hostname": "ldap.example.com",
+     "altNames": [
+       "ldap.example.com"
+     ],
+     "passphrase": "SecretPassphrase"
+   }
+   ```
+
+7. All your web certs will be saved to the directory specified in the config in the `newCerts` directory. Private keys are all in the `private` directory. Your Root CA cert is in the `certs` folder and will need to be applied to all machines as a Trusted Root Certificate
+8. (Optional) Create an intermediate CA by posting to `http://localhost:{{SERVER.PORT}}/intermediate` or running:
 
    ```cmd
    CAPASS=SecretPassphrase node scripts/setup-intermediate.js intermediate-name

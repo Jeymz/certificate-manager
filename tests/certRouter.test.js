@@ -3,6 +3,7 @@ const express = require('express');
 
 jest.mock('../src/controllers/certController', () => ({
   newWebServerCertificate: jest.fn(),
+  newLdapServerCertificate: jest.fn(),
   newIntermediateCA: jest.fn(),
   revokeCertificate: jest.fn(),
   getCRL: jest.fn(),
@@ -74,6 +75,30 @@ describe('certRouter', () => {
     expect(res.status).toBe(400);
     expect(res.body).toEqual({ error: 'Unable to process request' });
     expect(logger.error).toHaveBeenCalled();
+  });
+
+  test('post /ldap forwards to controller', async() => {
+    controller.newLdapServerCertificate.mockResolvedValue({ ldap: true });
+    const res = await request(app)
+      .post('/ldap')
+      .send({ hostname: 'ldap.example.com', passphrase: 'p' });
+    expect(res.body).toEqual({ ldap: true });
+    expect(controller.newLdapServerCertificate)
+      .toHaveBeenCalledWith('ldap.example.com', 'p', undefined, undefined, undefined);
+  });
+
+  test('post /ldap rejects invalid body', async() => {
+    mockConfig.getValidator.mockReturnValueOnce({ validateSchema: jest.fn(() => false) });
+    const res = await request(app).post('/ldap').send({});
+    expect(res.status).toBe(400);
+  });
+
+  test('post /ldap rejects non-object body', async() => {
+    const res = await request(app)
+      .post('/ldap')
+      .set('Content-Type', 'application/json')
+      .send('"bad"');
+    expect(res.status).toBe(400);
   });
 
   test('post /intermediate forwards to controller', async() => {

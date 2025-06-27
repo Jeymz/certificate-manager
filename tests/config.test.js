@@ -47,7 +47,9 @@ describe('config resource', () => {
   test('getStoreDirectory and extensions', () => {
     const config = configFactory();
     expect(config.getStoreDirectory()).toContain('files_test');
-    expect(config.getCertExtensions()).toHaveProperty('webServer');
+    const extensions = config.getCertExtensions();
+    expect(extensions).toHaveProperty('webServer');
+    expect(extensions).toHaveProperty('ldapServer');
   });
 
   test('getDefaultIntermediate returns configured value', () => {
