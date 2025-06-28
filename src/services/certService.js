@@ -5,6 +5,15 @@ const CertificateRequest = require('../resources/certificateRequest');
 const CA = require('../resources/ca');
 const revocation = require('../resources/revocation');
 const config = require('../resources/config')();
+const logger = require('../utils/logger');
+
+async function writeP12ToFile(hostname, p12b64) {
+  const store = config.getStoreDirectory();
+  const bundlePath = path.join(store, 'newCerts', `${hostname}.bundle.p12`);
+  await fs.writeFile(bundlePath, Buffer.from(p12b64, 'base64'), { mode: 0o600 });
+  logger.info(`Saved PKCS#12 bundle: ${bundlePath}`);
+  return bundlePath;
+}
 
 module.exports = {
   /**
@@ -59,6 +68,7 @@ module.exports = {
     if (bundleP12) {
       const bundlePass = password || passphrase;
       result.p12 = csr.getPkcs12Bundle(certificate, caChain, bundlePass);
+      await writeP12ToFile(hostname, result.p12);
     }
     return result;
   },
@@ -116,6 +126,7 @@ module.exports = {
     if (bundleP12) {
       const bundlePass = password || passphrase;
       result.p12 = csr.getPkcs12Bundle(certificate, caChain, bundlePass);
+      await writeP12ToFile(hostname, result.p12);
     }
     return result;
   },
