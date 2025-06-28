@@ -67,6 +67,16 @@ describe('certController', () => {
     expect(CertificateRequest.mock.results[0].value.getPkcs12Bundle).toHaveBeenCalledWith('cert', 'caCertroot', 'p12pass');
   });
 
+  test('p12 bundle written to disk when requested', async() => {
+    const fs = require('fs');
+    await controller.newWebServerCertificate('foo.example.com', 'pass', false, true, 'p12pass');
+    expect(fs.promises.writeFile).toHaveBeenCalledWith(
+      expect.stringContaining('foo.example.com.bundle.p12'),
+      expect.any(Buffer),
+      expect.objectContaining({ mode: 0o600 }),
+    );
+  });
+
   test('newIntermediateCA writes files', async() => {
     const fs = require('fs');
     const result = await controller.newIntermediateCA('intermediate.example.com', 'pass', 'intpass');

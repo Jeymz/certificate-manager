@@ -124,7 +124,7 @@ dependency. Installation differs slightly for each case.
    }
    ```
 
-7. All your web certs will be saved to the directory specified in the config in the `newCerts` directory. Private keys are all in the `private` directory. Your Root CA cert is in the `certs` folder and will need to be applied to all machines as a Trusted Root Certificate
+7. All your web certs will be saved to the directory specified in the config in the `newCerts` directory. Private keys are all in the `private` directory. Your Root CA cert is in the `certs` folder and will need to be applied to all machines as a Trusted Root Certificate. If `"bundleP12": true` is included in the request body, a PKCS#12 bundle will also be saved as `newCerts/<hostname>.bundle.p12`.
 8. (Optional) Create an intermediate CA by posting to `http://localhost:{{SERVER.PORT}}/intermediate` or running:
 
    ```cmd
