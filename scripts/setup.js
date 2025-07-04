@@ -105,6 +105,12 @@ async function createCA() {
   }), { encoding: 'utf-8' });
   await fs.writeFile(path.join(config.getStoreDirectory(), 'serial'), '1000000', { encoding: 'utf-8' });
   logger.info('CA created successfully.');
+  logger.audit.info({
+    timestamp: new Date().toISOString(),
+    eventType: 'CA_CREATE',
+    subject: 'root',
+    performedBy: process.env.USER || 'system',
+  });
 }
 
 if (require.main === module) {

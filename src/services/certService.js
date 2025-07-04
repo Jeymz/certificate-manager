@@ -26,7 +26,7 @@ module.exports = {
    * @param {string|null} [password=null] - Optional bundle password.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  async newWebServerCertificate(hostname, passphrase, altNames = false, bundleP12 = false, password = null) {
+  async newWebServerCertificate(hostname, passphrase, altNames = false, bundleP12 = false, password = null, performedBy = undefined) {
     const csr = new CertificateRequest(hostname);
     if (altNames && altNames.length > 0) {
       csr.addAltNames(altNames);
@@ -41,7 +41,7 @@ module.exports = {
       return { error: 'Root CA may not issue leaf certs' };
     }
     const ca = await new CA(config.getDefaultIntermediate());
-    ca.unlockCA(passphrase);
+    ca.unlockCA(passphrase, performedBy);
     const { certificate, serial, expiration } = await ca.signCSR(csr);
 
     const store = config.getStoreDirectory();
@@ -73,6 +73,13 @@ module.exports = {
       result.p12 = csr.getPkcs12Bundle(certificate, caChain, bundlePass);
       await writeP12ToFile(hostname, result.p12);
     }
+    logger.audit.info({
+      timestamp: new Date().toISOString(),
+      eventType: 'CERT_ISSUE',
+      subject: hostname,
+      serialNumber: serial.toString(),
+      performedBy,
+    });
     return result;
   },
 
@@ -86,7 +93,7 @@ module.exports = {
    * @param {string|null} [password=null] - Optional bundle password.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  async newLdapServerCertificate(hostname, passphrase, altNames = false, bundleP12 = false, password = null) {
+  async newLdapServerCertificate(hostname, passphrase, altNames = false, bundleP12 = false, password = null, performedBy = undefined) {
     const csr = new CertificateRequest(hostname);
     csr.setCertType('ldapServer');
     if (altNames && altNames.length > 0) {
@@ -102,7 +109,7 @@ module.exports = {
       return { error: 'Root CA may not issue leaf certs' };
     }
     const ca = await new CA(config.getDefaultIntermediate());
-    ca.unlockCA(passphrase);
+    ca.unlockCA(passphrase, performedBy);
     const { certificate, serial, expiration } = await ca.signCSR(csr);
 
     const store = config.getStoreDirectory();
@@ -134,6 +141,13 @@ module.exports = {
       result.p12 = csr.getPkcs12Bundle(certificate, caChain, bundlePass);
       await writeP12ToFile(hostname, result.p12);
     }
+    logger.audit.info({
+      timestamp: new Date().toISOString(),
+      eventType: 'CERT_ISSUE',
+      subject: hostname,
+      serialNumber: serial.toString(),
+      performedBy,
+    });
     return result;
   },
 
@@ -145,7 +159,7 @@ module.exports = {
    * @param {string} [intermediatePassphrase] - Passphrase for the new CA key.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  async newIntermediateCA(hostname, passphrase, intermediatePassphrase) {
+  async newIntermediateCA(hostname, passphrase, intermediatePassphrase, performedBy = undefined) {
     const options = {
       modulusLength: 4096,
       publicKeyEncoding: { type: 'spki', format: 'pem' },
@@ -176,13 +190,20 @@ module.exports = {
       return { error: 'Unable to verify CSR' };
     }
     const ca = await new CA();
-    ca.unlockCA(passphrase);
-    const { certificate } = await ca.signCSR(csr);
+    ca.unlockCA(passphrase, performedBy);
+    const { certificate, serial } = await ca.signCSR(csr);
     const privateKey = keypair.privateKey;
     const intDir = path.join(config.getStoreDirectory(), 'intermediates');
     await fs.mkdir(intDir, { recursive: true });
     await fs.writeFile(path.join(intDir, `${hostname}.cert.crt`), certificate, { encoding: 'utf-8' });
     await fs.writeFile(path.join(intDir, `${hostname}.key.pem`), privateKey, { encoding: 'utf-8' });
+    logger.audit.info({
+      timestamp: new Date().toISOString(),
+      eventType: 'CA_CREATE',
+      subject: hostname,
+      serialNumber: serial.toString(),
+      performedBy,
+    });
     return { certificate, privateKey, hostname };
   },
 };

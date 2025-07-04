@@ -9,7 +9,7 @@ jest.mock('../src/controllers/certController', () => ({
   getCRL: jest.fn(),
 }));
 const controller = require('../src/controllers/certController');
-jest.mock('../src/utils/logger', () => ({ error: jest.fn(), info: jest.fn(), debug: jest.fn() }));
+jest.mock('../src/utils/logger', () => ({ error: jest.fn(), info: jest.fn(), debug: jest.fn(), audit: { info: jest.fn() } }));
 const logger = require('../src/utils/logger');
 
 var mockConfig = {
@@ -46,7 +46,7 @@ describe('certRouter', () => {
     // file deepcode ignore NoHardcodedPasswords/test: this is a functionality test, not intended for production data
     const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p', bundleP12: true, password: 'pass' });
     expect(res.body).toEqual({ ok: true });
-    expect(controller.newWebServerCertificate).toHaveBeenCalledWith('foo.example.com', 'p', undefined, true, 'pass');
+    expect(controller.newWebServerCertificate).toHaveBeenCalledWith('foo.example.com', 'p', undefined, true, 'pass', expect.any(String));
   });
 
   test('post /new rejects invalid body', async() => {
@@ -84,7 +84,7 @@ describe('certRouter', () => {
       .send({ hostname: 'ldap.example.com', passphrase: 'p' });
     expect(res.body).toEqual({ ldap: true });
     expect(controller.newLdapServerCertificate)
-      .toHaveBeenCalledWith('ldap.example.com', 'p', undefined, undefined, undefined);
+      .toHaveBeenCalledWith('ldap.example.com', 'p', undefined, undefined, undefined, expect.any(String));
   });
 
   test('post /ldap rejects invalid body', async() => {
@@ -107,7 +107,7 @@ describe('certRouter', () => {
       .post('/intermediate')
       .send({ hostname: 'intermediate.example.com', passphrase: 'p', intermediatePassphrase: 'int' });
     expect(res.body).toEqual({ ok: true });
-    expect(controller.newIntermediateCA).toHaveBeenCalledWith('intermediate.example.com', 'p', 'int');
+    expect(controller.newIntermediateCA).toHaveBeenCalledWith('intermediate.example.com', 'p', 'int', expect.any(String));
   });
 
   test('post /intermediate rejects non-object body', async() => {
@@ -137,7 +137,7 @@ describe('certRouter', () => {
       .post('/revoke')
       .send({ serialNumber: '1', reason: 'KeyCompromise' });
     expect(res.body).toEqual({ revoked: true });
-    expect(controller.revokeCertificate).toHaveBeenCalledWith('1', 'KeyCompromise');
+    expect(controller.revokeCertificate).toHaveBeenCalledWith('1', 'KeyCompromise', expect.any(String));
   });
 
   test('post /revoke rejects non-object body', async() => {

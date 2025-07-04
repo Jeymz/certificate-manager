@@ -25,6 +25,25 @@ const logger = createLogger({
   transports: loggerTransports,
 });
 
+const auditTransports = [];
+auditTransports.push(new transports.Console({ format: format.json() }));
+if (process.env.AUDIT_LOG_FILE) {
+  auditTransports.push(new transports.File({
+    filename: process.env.AUDIT_LOG_FILE,
+    format: format.combine(format.timestamp(), format.json()),
+    maxsize: 1048576,
+    maxFiles: 5,
+  }));
+}
+
+const auditLogger = createLogger({
+  level: 'info',
+  format: format.combine(format.timestamp(), format.json()),
+  transports: auditTransports,
+});
+
+logger.audit = auditLogger;
+
 /**
  * Shared logger instance.
  *
