@@ -37,6 +37,9 @@ module.exports = {
         error: 'Unable to verify CSR',
       };
     }
+    if (!config.getDefaultIntermediate() && config.getRequireIntermediate()) {
+      return { error: 'Root CA may not issue leaf certs' };
+    }
     const ca = await new CA(config.getDefaultIntermediate());
     ca.unlockCA(passphrase);
     const { certificate, serial, expiration } = await ca.signCSR(csr);
@@ -94,6 +97,9 @@ module.exports = {
       return {
         error: 'Unable to verify CSR',
       };
+    }
+    if (!config.getDefaultIntermediate() && config.getRequireIntermediate()) {
+      return { error: 'Root CA may not issue leaf certs' };
     }
     const ca = await new CA(config.getDefaultIntermediate());
     ca.unlockCA(passphrase);
