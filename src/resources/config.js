@@ -38,6 +38,10 @@ class Config {
     });
     this.#private.defaultIntermediate =
       this.#private.configuration.defaultIntermediate || null;
+    this.#private.requireIntermediate =
+      this.#private.configuration.requireIntermediate !== undefined
+        ? this.#private.configuration.requireIntermediate
+        : true;
     this.#private.storeDirectory = configurationFiles.storeDirectory;
     this.#private.validator = new Validator(this.#private.configuration);
     this.validateHostname = this.#private.validator.hostname;
@@ -110,6 +114,10 @@ class Config {
 
   getDefaultIntermediate() {
     return this.#private.defaultIntermediate;
+  }
+
+  getRequireIntermediate() {
+    return this.#private.requireIntermediate;
   }
 }
 

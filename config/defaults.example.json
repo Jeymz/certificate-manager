@@ -36,6 +36,7 @@
   "validDomains": [
     "example.com"
   ],
+  "requireIntermediate": true,
   "defaultIntermediate": "intermediate",
   "extensions": {
     "CA": [

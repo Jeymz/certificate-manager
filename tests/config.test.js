@@ -56,4 +56,9 @@ describe('config resource', () => {
     const config = configFactory();
     expect(config.getDefaultIntermediate()).toBe('intermediate');
   });
+
+  test('getRequireIntermediate returns configured value', () => {
+    const config = configFactory();
+    expect(config.getRequireIntermediate()).toBe(true);
+  });
 });
