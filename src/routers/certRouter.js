@@ -33,6 +33,7 @@ router.post('/new', async(req, res) => {
       password,
     } = req.body;
 
+    // deepcode ignore PT: All request body parameters are validated by the schema on line 22
     const newCert = await controller.newWebServerCertificate(
       hostname,
       passphrase,
@@ -71,6 +72,8 @@ router.post('/ldap', async(req, res) => {
       password,
     } = req.body;
 
+    
+    // deepcode ignore PT: All request body parameters are validated by the schema on line 61
     const newCert = await controller.newLdapServerCertificate(
       hostname,
       passphrase,

@@ -6,17 +6,28 @@ const logger = require('../utils/logger');
 class Revocation {
   constructor() {
     this.storePath = path.join(config.getStoreDirectory(), 'revoked.json');
+    logger.debug(`Revocation store path: ${this.storePath}`);
   }
 
   async _load() {
     try {
       const data = await fs.readFile(this.storePath, 'utf-8');
+      logger.debug(`Loaded revocation data: ${data.length} bytes`, {
+        data,
+      });
       try {
         return JSON.parse(data);
-      } catch {
+      } catch (err) {
+        logger.error('Failed to parse revocation data, initializing new store', {
+          error: err.message,
+          data,
+        });
         return { certs: [] };
       }
-    } catch {
+    } catch (err) {
+      logger.error('Failed to load revocation data, initializing new store', {
+        error: err.message,
+      });
       return { certs: [] };
     }
   }

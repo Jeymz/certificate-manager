@@ -3,7 +3,6 @@ const path = require('path');
 const forge = require('node-forge');
 const config = require('./config')();
 const logger = require('../utils/logger');
-const revocation = require('./revocation');
 
 /**
  * Certificate Authority helper for issuing and tracking certificates.

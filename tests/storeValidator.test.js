@@ -36,7 +36,7 @@ describe('validateStore utility', () => {
     const dir = await createStore({ skipSerial: true });
     const created = await validateStore(dir);
     expect(created).toContain('serial');
-    expect(created.length).toBe(1);
+    expect(created).toHaveLength(1);
     await cleanup(dir);
   });
 
@@ -44,7 +44,7 @@ describe('validateStore utility', () => {
     const dir = await createStore({ skipLog: true });
     const created = await validateStore(dir);
     expect(created).toContain('log.json');
-    expect(created.length).toBe(1);
+    expect(created).toHaveLength(1);
     await cleanup(dir);
   });
 
@@ -52,7 +52,7 @@ describe('validateStore utility', () => {
     const dir = await createStore({ skipRevoked: true });
     const created = await validateStore(dir);
     expect(created).toContain('revoked.json');
-    expect(created.length).toBe(1);
+    expect(created).toHaveLength(1);
     await cleanup(dir);
   });
 
@@ -60,7 +60,7 @@ describe('validateStore utility', () => {
     const dir = await createStore({ skipIntermediates: true });
     const created = await validateStore(dir);
     expect(created).toContain('intermediates');
-    expect(created.length).toBe(1);
+    expect(created).toHaveLength(1);
     await cleanup(dir);
   });
 
