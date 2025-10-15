@@ -15,8 +15,9 @@ dependency. Installation differs slightly for each case.
 - Set the `CAPASS` environment variable before running the setup script
 - (Optional) environment variables:
   - `CA_VALIDITY_YEARS` – number of years the root CA is valid (default `5`)
-  - `LOG_FILE` – path to a log file
-  - `LOG_LEVEL` – log level (default `info`)
+  - `LOG_FILE` - path to a log file
+  - `LOG_LEVEL` - log level (default `info`)
+  - `AUDIT_LOG_FILE` - path to the audit log file
 - Install runtime dependencies with `npm install --production`
 - Run `npm run setup` to generate the root CA
 - Start the server with `npm start`
@@ -133,6 +134,44 @@ dependency. Installation differs slightly for each case.
    ```
 
    This intermediate certificate will be placed under `files/intermediates/` and used by default for server certificates if `defaultIntermediate` is set in the configuration. When `requireIntermediate` is `true`, the application refuses to issue leaf certificates with the root key. When a server certificate is issued it is saved alongside a `.chain.crt` file containing both the server and intermediate certificates and the HTTP response includes this chain in a `chain` property. Present this chain so clients can validate the path using only the trusted root certificate.
+
+## Audit logging
+
+This project now includes audit logging for privileged operations (for example: issuing a new CA or intermediate, revoking certificates, and other actions that use the CA private key).
+
+What is logged
+
+- Timestamp and operation type (create, revoke, intermediate, etc.)
+- Username/actor or source IP when available (depends on how you authenticate/forward requests)
+- Target resource (hostname, intermediate name, certificate fingerprint or serial)
+- Outcome (success or failure) and an error message when applicable
+- Minimal context required to reproduce the action (request body fields such as hostname and altNames are recorded, but private key material and passphrases are never logged)
+
+How to enable and configure
+
+- The audit logger is wired into the application and audit calls are emitted by the application as part of privileged operations. Audit entries are emitted as JSON objects (one JSON object per line) and include a timestamp.
+- By default audit entries are written to the console (stdout) in JSON format. To write audit entries to a dedicated file, set the `AUDIT_LOG_FILE` environment variable to a filesystem path.
+- The audit logger uses a file transport (when `AUDIT_LOG_FILE` is set) with the following defaults: JSON format with a timestamp, maxsize = 1,048,576 bytes (1 MB) and maxFiles = 5 for simple rotation.
+- Application logs (info/debug/error) are controlled separately by `LOG_FILE` and `LOG_LEVEL`. Setting `LOG_FILE` does not affect where audit logs are stored.
+
+Environment variables (audit-related)
+
+- `AUDIT_LOG_FILE` – path to the audit log file. When present audit entries are appended to this file (JSON, timestamped). If omitted, audit entries are written to stdout.
+- `LOG_FILE` – path to the general application log file (separate from `AUDIT_LOG_FILE`).
+- `LOG_LEVEL` – controls the general logger verbosity (default: `info`). Audit entries use a dedicated audit logger and are emitted regardless of `LOG_LEVEL`.
+
+Example audit log entry (JSON, one line per entry)
+
+```json
+{"ts":"2025-10-15T12:34:56.789Z","level":"audit","actor":"192.0.2.1","operation":"issue_certificate","target":"example.com","result":"success","serial":"01AB23CD","details":{"altNames":["example.com","www.example.com"],"bundleP12":true}}
+```
+
+Notes and best practices
+
+- Sensitive information: The implementation intentionally avoids logging sensitive secrets such as private keys and passphrases. Only operational metadata and request-level context are recorded.
+- Rotation & retention: Use your system log rotation or a central log collector (ELK/Opensearch, Splunk, etc.) to rotate and retain audit logs according to your security policy.
+- Time synchronization: Ensure your server's clock is synchronized (NTP) so timestamps can be correlated across systems.
+- Forwarding logs: If you forward logs to a central collector, make sure transport and storage are protected (TLS, access controls).
 
 ## Roadmap / Features
 

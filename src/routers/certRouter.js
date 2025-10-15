@@ -33,12 +33,14 @@ router.post('/new', async(req, res) => {
       password,
     } = req.body;
 
+    // deepcode ignore PT: All request body parameters are validated by the schema on line 22
     const newCert = await controller.newWebServerCertificate(
       hostname,
       passphrase,
       altNames,
       bundleP12,
       password,
+      req.ip,
     );
     return res.status(200).json(newCert);
   } catch (err) {
@@ -70,12 +72,15 @@ router.post('/ldap', async(req, res) => {
       password,
     } = req.body;
 
+    
+    // deepcode ignore PT: All request body parameters are validated by the schema on line 61
     const newCert = await controller.newLdapServerCertificate(
       hostname,
       passphrase,
       altNames,
       bundleP12,
       password,
+      req.ip,
     );
     return res.status(200).json(newCert);
   } catch (err) {
@@ -101,7 +106,7 @@ router.post('/intermediate', async(req, res) => {
       intermediatePassphrase,
     } = req.body;
     // deepcode ignore PT: The hostname is validated by the schema on line 57
-    const ca = await controller.newIntermediateCA(hostname, passphrase, intermediatePassphrase);
+    const ca = await controller.newIntermediateCA(hostname, passphrase, intermediatePassphrase, req.ip);
     return res.status(200).json(ca);
   } catch (err) {
     logger.error(`Error creating intermediate CA: ${err.message}`);
@@ -121,7 +126,7 @@ router.post('/revoke', async(req, res) => {
       return res.status(400).send({ error: 'Invalid request body: schema validation failed' });
     }
     const { serialNumber, reason } = req.body;
-    const result = await controller.revokeCertificate(serialNumber, reason);
+    const result = await controller.revokeCertificate(serialNumber, reason, req.ip);
     if (result.error) {
       return res.status(404).send(result);
     }

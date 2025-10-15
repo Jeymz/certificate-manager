@@ -12,8 +12,8 @@ module.exports = {
    * @param {string|null} [password=null] - Optional bundle password.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  newWebServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null) => certService
-    .newWebServerCertificate(hostname, passphrase, altNames, bundleP12, password),
+  newWebServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null, performedBy = undefined) => certService
+    .newWebServerCertificate(hostname, passphrase, altNames, bundleP12, password, performedBy),
 
   /**
    * Generate and sign a new LDAP server certificate.
@@ -25,8 +25,8 @@ module.exports = {
    * @param {string|null} [password=null] - Optional bundle password.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  newLdapServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null) => certService
-    .newLdapServerCertificate(hostname, passphrase, altNames, bundleP12, password),
+  newLdapServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null, performedBy = undefined) => certService
+    .newLdapServerCertificate(hostname, passphrase, altNames, bundleP12, password, performedBy),
 
   /**
    * Generate and sign a new intermediate CA certificate.
@@ -35,8 +35,8 @@ module.exports = {
    * @param {string} passphrase - Passphrase to unlock the root CA key.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  newIntermediateCA: async(hostname, passphrase, intermediatePassphrase) => certService
-    .newIntermediateCA(hostname, passphrase, intermediatePassphrase),
+  newIntermediateCA: async(hostname, passphrase, intermediatePassphrase, performedBy = undefined) => certService
+    .newIntermediateCA(hostname, passphrase, intermediatePassphrase, performedBy),
 
   /**
    * Revoke a previously issued certificate.
@@ -45,8 +45,8 @@ module.exports = {
    * @param {string} [reason] - Optional revocation reason.
    * @returns {Promise<Object>} Result of the revocation request.
    */
-  revokeCertificate: async(serialNumber, reason) => {
-    const result = await revocation.revoke(serialNumber.toString(), reason);
+  revokeCertificate: async(serialNumber, reason, performedBy = undefined) => {
+    const result = await revocation.revoke(serialNumber.toString(), reason, performedBy);
     if (!result) {
       return { error: 'Serial not found' };
     }

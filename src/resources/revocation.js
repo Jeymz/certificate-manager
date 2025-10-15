@@ -1,21 +1,33 @@
 const fs = require('fs').promises;
 const path = require('path');
 const config = require('./config')();
+const logger = require('../utils/logger');
 
 class Revocation {
   constructor() {
     this.storePath = path.join(config.getStoreDirectory(), 'revoked.json');
+    logger.debug(`Revocation store path: ${this.storePath}`);
   }
 
   async _load() {
     try {
       const data = await fs.readFile(this.storePath, 'utf-8');
+      logger.debug(`Loaded revocation data: ${data.length} bytes`, {
+        data,
+      });
       try {
         return JSON.parse(data);
-      } catch {
+      } catch (err) {
+        logger.error('Failed to parse revocation data, initializing new store', {
+          error: err.message,
+          data,
+        });
         return { certs: [] };
       }
-    } catch {
+    } catch (err) {
+      logger.error('Failed to load revocation data, initializing new store', {
+        error: err.message,
+      });
       return { certs: [] };
     }
   }
@@ -35,7 +47,7 @@ class Revocation {
     await this._save(data);
   }
 
-  async revoke(serialNumber, reason) {
+  async revoke(serialNumber, reason, performedBy = undefined) {
     const data = await this._load();
     const entry = data.certs.find((c) => c.serialNumber === serialNumber.toString());
     if (!entry) {
@@ -48,6 +60,13 @@ class Revocation {
         entry.reason = reason;
       }
       await this._save(data);
+      logger.audit.info({
+        timestamp: new Date().toISOString(),
+        eventType: 'CERT_REVOKE',
+        serialNumber: serialNumber.toString(),
+        performedBy,
+        reason,
+      });
     }
     return entry;
   }

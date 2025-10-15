@@ -45,7 +45,7 @@ test('intermediate certificate validates with root CA', async() => {
 });
 
 test('web server certificate validates with root CA', async() => {
-  const { certificate, chain } = await controller.newWebServerCertificate('server.example.com', 'pass');
+  const { chain } = await controller.newWebServerCertificate('server.example.com', 'pass');
   const rootPem = await fs.readFile(path.join(__dirname, '../files_test/certs/ca.cert.crt'), 'utf-8');
   const rootCert = forge.pki.certificateFromPem(rootPem);
   const chainCerts = chain.match(/-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----/g);

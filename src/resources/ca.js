@@ -3,13 +3,24 @@ const path = require('path');
 const forge = require('node-forge');
 const config = require('./config')();
 const logger = require('../utils/logger');
-const revocation = require('./revocation');
 
 /**
  * Certificate Authority helper for issuing and tracking certificates.
  */
 module.exports = class CA {
   #private = {};
+  static #lastPassFail = 0;
+  static #logPassFail(performedBy) {
+    const now = Date.now();
+    if (now - CA.#lastPassFail > 60000) {
+      logger.audit.info({
+        timestamp: new Date().toISOString(),
+        eventType: 'PASSFAIL',
+        performedBy,
+      });
+      CA.#lastPassFail = now;
+    }
+  }
 
   /**
    * Create a new CA instance and asynchronously load key material.
@@ -80,7 +91,7 @@ module.exports = class CA {
    * @param {string} passphrase - Passphrase used to decrypt the key.
    * @returns {void}
    */
-  unlockCA(passphrase) {
+  unlockCA(passphrase, performedBy = undefined) {
     let key = forge.pki.decryptRsaPrivateKey(this.#private.lockedKey, passphrase);
     if (!key) {
       try {
@@ -92,6 +103,9 @@ module.exports = class CA {
       } catch (err) {
         logger.error(`Failed to decrypt CA key: ${err.message}`);
       }
+    }
+    if (!key) {
+      CA.#logPassFail(performedBy);
     }
     this.#private.caKey = key;
   }

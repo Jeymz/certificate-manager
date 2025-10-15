@@ -18,7 +18,7 @@ jest.mock('node-forge', () => ({
   },
   md: { sha256: { create: jest.fn() } },
 }));
-jest.mock('../src/utils/logger', () => ({ error: jest.fn(), debug: jest.fn(), info: jest.fn() }));
+jest.mock('../src/utils/logger', () => ({ error: jest.fn(), debug: jest.fn(), info: jest.fn(), audit: { info: jest.fn() } }));
 
 const path = require('path');
 let fs;

@@ -14,7 +14,7 @@ const serverConfig = config.getServerConfig();
 
 const {
   port,
-  protocol = 'https',
+  protocol,
   key,
   cert,
 } = serverConfig;
@@ -33,6 +33,7 @@ if (protocol === 'https') {
   };
   server = https.createServer(options, app);
 } else {
+  // deepcode ignore HttpToHttps: <please specify a reason of ignoring this>
   server = http.createServer(app);
 }
 

@@ -36,14 +36,21 @@ async function createIntermediate(name, passphrase, intermediatePassphrase) {
     throw new Error('Unable to verify CSR');
   }
   const ca = await new CA();
-  ca.unlockCA(passphrase);
-  const { certificate } = await ca.signCSR(csr);
+  ca.unlockCA(passphrase, process.env.USER || 'system');
+  const { certificate, serial } = await ca.signCSR(csr);
   const privateKey = keypair.privateKey;
   const intDir = path.join(config.getStoreDirectory(), 'intermediates');
   await fs.mkdir(intDir, { recursive: true });
   await fs.writeFile(path.join(intDir, `${name}.cert.crt`), certificate, { encoding: 'utf-8' });
   await fs.writeFile(path.join(intDir, `${name}.key.pem`), privateKey, { encoding: 'utf-8' });
   logger.info(`Intermediate CA '${name}' created.`);
+  logger.audit.info({
+    timestamp: new Date().toISOString(),
+    eventType: 'CA_CREATE',
+    subject: name,
+    serialNumber: serial.toString(),
+    performedBy: process.env.USER || 'system',
+  });
   return { certificate, privateKey, name };
 }
 

@@ -88,7 +88,7 @@ describe('certController', () => {
     revocation.revoke.mockResolvedValue({});
     const result = await controller.revokeCertificate('1', 'KeyCompromise');
     expect(result).toEqual({ revoked: true });
-    expect(revocation.revoke).toHaveBeenCalledWith('1', 'KeyCompromise');
+    expect(revocation.revoke).toHaveBeenCalledWith('1', 'KeyCompromise', undefined);
   });
 
   test('revokeCertificate handles missing serial', async() => {

@@ -31,14 +31,14 @@ module.exports = class CertificateRequest {
               keypair.passphrase,
             );
             privateKey = forge.pki.privateKeyFromAsn1(info);
-          } catch (err) {
+          } catch {
             privateKey = null;
           }
         }
       } else {
         try {
           privateKey = forge.pki.privateKeyFromPem(keypair.privateKeyPEM);
-        } catch (err) {
+        } catch {
           privateKey = null;
         }
       }
