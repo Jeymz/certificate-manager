@@ -15,12 +15,47 @@ module.exports = class CertificateRequest {
    * @param {string} hostname - Fully qualified domain name for the CSR.
    * @throws {Error} When the hostname fails validation.
    */
-  constructor(hostname) {
-    const keypair = forge.pki.rsa.generateKeyPair(2048);
-    this.#private.keypair = {
-      publicKey: forge.pki.publicKeyToPem(keypair.publicKey),
-      privateKey: keypair.privateKey,
-    };
+  constructor(hostname, keypair = null) {
+    let keys;
+    if (keypair && keypair.publicKey && keypair.privateKeyPEM) {
+      let privateKey;
+      if (keypair.passphrase) {
+        privateKey = forge.pki.decryptRsaPrivateKey(
+          keypair.privateKeyPEM,
+          keypair.passphrase,
+        );
+        if (!privateKey) {
+          try {
+            const info = forge.pki.decryptPrivateKeyInfo(
+              forge.pki.encryptedPrivateKeyFromPem(keypair.privateKeyPEM),
+              keypair.passphrase,
+            );
+            privateKey = forge.pki.privateKeyFromAsn1(info);
+          } catch {
+            privateKey = null;
+          }
+        }
+      } else {
+        try {
+          privateKey = forge.pki.privateKeyFromPem(keypair.privateKeyPEM);
+        } catch {
+          privateKey = null;
+        }
+      }
+      keys = {
+        publicKey: keypair.publicKey,
+        privateKey,
+        privateKeyPEM: keypair.privateKeyPEM,
+      };
+    } else {
+      const generated = forge.pki.rsa.generateKeyPair(2048);
+      keys = {
+        publicKey: forge.pki.publicKeyToPem(generated.publicKey),
+        privateKey: generated.privateKey,
+        privateKeyPEM: forge.pki.privateKeyToPem(generated.privateKey),
+      };
+    }
+    this.#private.keypair = keys;
     this.#private.csr = forge.pki.createCertificationRequest();
     this.#private.csr.publicKey = forge.pki.publicKeyFromPem(this.#private.keypair.publicKey);
     const subject = config.getSubject();
@@ -127,7 +162,8 @@ module.exports = class CertificateRequest {
    * @returns {string} PEM encoded private key.
    */
   getPrivateKey() {
-    return forge.pki.privateKeyToPem(this.#private.keypair.privateKey);
+    return this.#private.keypair.privateKeyPEM
+      || forge.pki.privateKeyToPem(this.#private.keypair.privateKey);
   }
 
   /**
@@ -153,5 +189,37 @@ module.exports = class CertificateRequest {
    */
   getCertType() {
     return this.#private.certType;
+  }
+
+  /**
+   * Generate a PKCS#12 bundle for the provided certificate and chain.
+   *
+   * @param {string} certificate - Leaf certificate in PEM format.
+   * @param {string} chain - PEM encoded certificate chain.
+   * @param {string} password - Encryption password for the bundle.
+   * @returns {string} Base64 encoded PKCS#12 archive.
+   */
+  getPkcs12Bundle(certificate, chain, password) {
+    if (!password || password.length < 4) {
+      throw new Error('Password required for PKCS#12 export (minimum 4 characters)');
+    }
+    const leaf = forge.pki.certificateFromPem(certificate);
+    const caCerts = [];
+    if (chain) {
+      const blocks = forge.pem.decode(chain);
+      blocks.forEach((block) => {
+        if (block.type === 'CERTIFICATE') {
+          caCerts.push(forge.pki.certificateFromPem(forge.pem.encode(block)));
+        }
+      });
+    }
+    const pkcs12Asn1 = forge.pkcs12.toPkcs12Asn1(
+      this.#private.keypair.privateKey,
+      leaf,
+      password,
+      { algorithm: 'aes256', usePBKDF2: true, ca: caCerts },
+    );
+    const der = forge.asn1.toDer(pkcs12Asn1).getBytes();
+    return Buffer.from(der, 'binary').toString('base64');
   }
 };

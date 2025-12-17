@@ -42,7 +42,7 @@ async function createCA() {
   logger.info('Generated RSA key pair for CA.');
   const cert = forge.pki.createCertificate();
   cert.publicKey = keys.publicKey;
-  cert.serialNumber = '1000000';
+  cert.serialNumber = (1000000).toString(16);
   cert.validity.notBefore = new Date();
   cert.validity.notAfter = new Date();
   cert.validity.notAfter.setFullYear(cert.validity.notBefore.getFullYear() + CA_VALIDITY_YEARS);
@@ -100,17 +100,31 @@ async function createCA() {
   await fs.writeFile(path.join(config.getStoreDirectory(), 'log.json'), JSON.stringify({
     requests: [],
   }), { encoding: 'utf-8' });
+  await fs.writeFile(path.join(config.getStoreDirectory(), 'revoked.json'), JSON.stringify({
+    certs: [],
+  }), { encoding: 'utf-8' });
   await fs.writeFile(path.join(config.getStoreDirectory(), 'serial'), '1000000', { encoding: 'utf-8' });
   logger.info('CA created successfully.');
+  logger.audit.info({
+    timestamp: new Date().toISOString(),
+    eventType: 'CA_CREATE',
+    subject: 'root',
+    performedBy: process.env.USER || 'system',
+  });
 }
 
-if (Object.keys(process.env).indexOf('CAPASS') < 0 || typeof process.env.CAPASS !== 'string') {
-  logger.error('CAPASS environment variable must be set to create a new CA.');
-  process.exit(1);
+if (require.main === module) {
+  if (
+    Object.keys(process.env).indexOf('CAPASS') < 0
+    || typeof process.env.CAPASS !== 'string'
+  ) {
+    logger.error('CAPASS environment variable must be set to create a new CA.');
+    process.exit(1);
+  }
+  createCA().catch((err) => {
+    logger.error(err.message);
+    process.exit(1);
+  });
 }
-createCA().catch((err) => {
-  logger.error(err.message);
-  process.exit(1);
-});
 
 module.exports = createCA;

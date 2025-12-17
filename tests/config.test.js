@@ -3,12 +3,22 @@ const configFactory = require('../src/resources/config');
 describe('config resource', () => {
   test('getServerConfig returns server config', () => {
     const config = configFactory();
-    expect(config.getServerConfig()).toEqual({ port: 3000 });
+    expect(config.getServerConfig()).toEqual({
+      port: 3000,
+      protocol: 'https',
+      key: './ssl/server.key',
+      cert: './ssl/server.crt',
+    });
   });
 
   test('isInitialized returns false without files', () => {
-    const config = configFactory();
+    const fs = require('fs');
+    jest.spyOn(fs, 'existsSync').mockReturnValue(false);
+    jest.resetModules();
+    const freshFactory = require('../src/resources/config');
+    const config = freshFactory();
     expect(config.isInitialized()).toBe(false);
+    fs.existsSync.mockRestore();
   });
 
   test('isInitialized true when files present', () => {
@@ -36,7 +46,19 @@ describe('config resource', () => {
 
   test('getStoreDirectory and extensions', () => {
     const config = configFactory();
-    expect(config.getStoreDirectory()).toContain('files');
-    expect(config.getCertExtensions()).toHaveProperty('webServer');
+    expect(config.getStoreDirectory()).toContain('files_test');
+    const extensions = config.getCertExtensions();
+    expect(extensions).toHaveProperty('webServer');
+    expect(extensions).toHaveProperty('ldapServer');
+  });
+
+  test('getDefaultIntermediate returns configured value', () => {
+    const config = configFactory();
+    expect(config.getDefaultIntermediate()).toBe('intermediate');
+  });
+
+  test('getRequireIntermediate returns configured value', () => {
+    const config = configFactory();
+    expect(config.getRequireIntermediate()).toBe(true);
   });
 });

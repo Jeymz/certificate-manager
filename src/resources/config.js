@@ -5,7 +5,9 @@ const Validator = require('./validator');
 const logger = require('../utils/logger');
 
 const configurationFiles = {
-  default: path.join(__dirname, '../', '../', 'config', 'defaults.json'),
+  default: process.env.CONFIG_PATH
+    ? path.resolve(process.env.CONFIG_PATH)
+    : path.join(__dirname, '../', '../', 'config', 'defaults.json'),
 };
 
 let config = false;
@@ -34,6 +36,12 @@ class Config {
         value: this.#private.configuration.subject[key].default,
       });
     });
+    this.#private.defaultIntermediate =
+      this.#private.configuration.defaultIntermediate || null;
+    this.#private.requireIntermediate =
+      this.#private.configuration.requireIntermediate !== undefined
+        ? this.#private.configuration.requireIntermediate
+        : true;
     this.#private.storeDirectory = configurationFiles.storeDirectory;
     this.#private.validator = new Validator(this.#private.configuration);
     this.validateHostname = this.#private.validator.hostname;
@@ -104,6 +112,13 @@ class Config {
     return JSON.parse(JSON.stringify(this.#private.configuration.extensions));
   }
 
+  getDefaultIntermediate() {
+    return this.#private.defaultIntermediate;
+  }
+
+  getRequireIntermediate() {
+    return this.#private.requireIntermediate;
+  }
 }
 
 /**

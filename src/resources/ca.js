@@ -9,33 +9,63 @@ const logger = require('../utils/logger');
  */
 module.exports = class CA {
   #private = {};
+  static #lastPassFail = 0;
+  static #logPassFail(performedBy) {
+    const now = Date.now();
+    if (now - CA.#lastPassFail > 60000) {
+      logger.audit.info({
+        timestamp: new Date().toISOString(),
+        eventType: 'PASSFAIL',
+        performedBy,
+      });
+      CA.#lastPassFail = now;
+    }
+  }
 
   /**
    * Create a new CA instance and asynchronously load key material.
    *
    * @returns {Promise<CA>} Resolves when initialization completes.
    */
-  constructor() {
+  constructor(intermediate = null) {
     const storeDirectory = config.getStoreDirectory();
     this.#private.store = {
       certs: path.join(storeDirectory, 'newCerts'),
       requests: path.join(storeDirectory, 'requests'),
       root: storeDirectory,
       log: path.join(storeDirectory, 'log.json'),
+      intermediate,
     };
     return (async() => {
       this.#private.serial = await fs.readFile(
         path.join(this.#private.store.root, 'serial'),
         'utf-8',
       );
-      this.#private.caCert = await fs.readFile(
-        path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
-        'utf-8',
-      );
-      this.#private.lockedKey = await fs.readFile(
-        path.join(this.#private.store.root, 'private', 'ca.key.pem'),
-        'utf-8',
-      );
+      if (intermediate) {
+        const base = path.join(this.#private.store.root, 'intermediates');
+        this.#private.caCert = await fs.readFile(
+          path.join(base, `${intermediate}.cert.crt`),
+          'utf-8',
+        );
+        this.#private.lockedKey = await fs.readFile(
+          path.join(base, `${intermediate}.key.pem`),
+          'utf-8',
+        );
+        this.#private.rootCert = await fs.readFile(
+          path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
+          'utf-8',
+        );
+      } else {
+        this.#private.caCert = await fs.readFile(
+          path.join(this.#private.store.root, 'certs', 'ca.cert.crt'),
+          'utf-8',
+        );
+        this.#private.lockedKey = await fs.readFile(
+          path.join(this.#private.store.root, 'private', 'ca.key.pem'),
+          'utf-8',
+        );
+        this.#private.rootCert = this.#private.caCert;
+      }
       return this;
     })();
   }
@@ -61,8 +91,44 @@ module.exports = class CA {
    * @param {string} passphrase - Passphrase used to decrypt the key.
    * @returns {void}
    */
-  unlockCA(passphrase) {
-    this.#private.caKey = forge.pki.decryptRsaPrivateKey(this.#private.lockedKey, passphrase);
+  unlockCA(passphrase, performedBy = undefined) {
+    let key = forge.pki.decryptRsaPrivateKey(this.#private.lockedKey, passphrase);
+    if (!key) {
+      try {
+        const info = forge.pki.decryptPrivateKeyInfo(
+          forge.pki.encryptedPrivateKeyFromPem(this.#private.lockedKey),
+          passphrase,
+        );
+        key = forge.pki.privateKeyFromAsn1(info);
+      } catch (err) {
+        logger.error(`Failed to decrypt CA key: ${err.message}`);
+      }
+    }
+    if (!key) {
+      CA.#logPassFail(performedBy);
+    }
+    this.#private.caKey = key;
+  }
+
+  /**
+   * Retrieve the PEM encoded certificate used for signing.
+   *
+   * @returns {string} Signing CA certificate in PEM format.
+   */
+  getCACertificate() {
+    return this.#private.caCert;
+  }
+
+  /**
+   * Retrieve the full certificate chain for this CA.
+   *
+   * @returns {string} PEM encoded certificate chain.
+   */
+  getCertChain() {
+    if (this.#private.store.intermediate) {
+      return `${this.#private.caCert}${this.#private.rootCert}`;
+    }
+    return this.#private.caCert;
   }
 
   /**
@@ -83,52 +149,30 @@ module.exports = class CA {
       throw new Error(`CSR verification failed for ${CSR.getHostname()}`);
     }
     const newCert = forge.pki.createCertificate();
-    newCert.serialNumber = await this.getSerial();
-    const certFilename = `${CSR.getHostname()}.cert.crt`;
-    const requestFilename = `${CSR.getHostname()}.request.pem`;
-    const privateKeyFilename = `${CSR.getHostname()}.key.pem`;
+    const serial = await this.getSerial();
+    newCert.serialNumber = parseInt(serial, 10).toString(16);
     const expiration = new Date();
     expiration.setFullYear(expiration.getFullYear() + 1);
-    const certPath = path.join(this.#private.store.certs, certFilename);
-    const csrPath = path.join(this.#private.store.requests, requestFilename);
-    const privateKeyPath = path.join(this.#private.store.root, 'private', privateKeyFilename);
     newCert.validity.notBefore = new Date();
     newCert.validity.notAfter = expiration;
     newCert.setSubject(csr.subject.attributes);
     const extensionConfigs = config.getCertExtensions();
     const extensions = extensionConfigs[CSR.getCertType()];
-    if (csr.attributes.length === 3) {
-      if (csr.attributes[csr.attributes.length - 1].name === 'extensionRequest') {
-        csr.attributes[csr.attributes.length - 1].extensions.forEach((extensionRequest) => {
-          if (extensionRequest.name === 'subjectAltName') {
-            extensions.push(extensionRequest);
-          }
-        });
-      }
+    const extReq = csr.attributes.find((a) => a.name === 'extensionRequest');
+    if (extReq) {
+      extReq.extensions.forEach((extensionRequest) => {
+        if (extensionRequest.name === 'subjectAltName') {
+          extensions.push(extensionRequest);
+        }
+      });
     }
     newCert.setIssuer(caCert.subject.attributes);
+    newCert.publicKey = csr.publicKey;
     logger.debug(extensions);
     newCert.setExtensions(extensions);
-
-    newCert.publicKey = csr.publicKey;
     newCert.sign(caKey, forge.md.sha256.create());
-    await fs.writeFile(
-      certPath,
-      forge.pki.certificateToPem(newCert),
-      { encoding: 'utf-8' },
-    );
-    await fs.writeFile(
-      csrPath,
-      CSR.getCSR(),
-      { encoding: 'utf-8' },
-    );
-    await fs.writeFile(
-      privateKeyPath,
-      CSR.getPrivateKey(),
-      { encoding: 'utf-8' },
-    );
-    await this.updateLog(csrPath, certPath, privateKeyPath, expiration, CSR.getHostname());
-    return forge.pki.certificateToPem(newCert);
+    const certPem = forge.pki.certificateToPem(newCert);
+    return { certificate: certPem, serial, expiration };
   }
 
   /**

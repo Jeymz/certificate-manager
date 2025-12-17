@@ -1,10 +1,13 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const helmet = require('helmet');
 
 /**
  * Express application instance.
  */
 const app = express();
+
+app.use(helmet());
 
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());

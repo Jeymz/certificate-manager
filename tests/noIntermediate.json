@@ -1,0 +1,19 @@
+{
+  "server": {
+    "port": 3000,
+    "protocol": "https",
+    "key": "./ssl/server.key",
+    "cert": "./ssl/server.crt"
+  },
+  "storeDirectory": "./files_test",
+  "subject": {
+    "email": {"prompt": "Email", "shortName": "E", "default": "test@example.com"},
+    "organization": {"prompt": "Org", "shortName": "O", "default": "Test"},
+    "locality": {"prompt": "Local", "shortName": "L", "default": "Test"},
+    "state": {"prompt": "State", "shortName": "ST", "default": "Test"},
+    "country": {"prompt": "Country", "shortName": "C", "default": "US"}
+  },
+  "validDomains": ["example.com"],
+  "requireIntermediate": true,
+  "extensions": {}
+}

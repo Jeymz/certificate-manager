@@ -1,5 +1,5 @@
-const CertificateRequest = require('../resources/certificateRequest');
-const CA = require('../resources/ca');
+const revocation = require('../resources/revocation');
+const certService = require('../services/certService');
 
 module.exports = {
   /**
@@ -8,27 +8,58 @@ module.exports = {
    * @param {string} hostname - Fully qualified domain name for the certificate.
    * @param {string} passphrase - Passphrase to unlock the CA key.
    * @param {string[]|false} [altNames=false] - Optional alternative names.
+   * @param {boolean} [bundleP12=false] - Whether to bundle as PKCS#12.
+   * @param {string|null} [password=null] - Optional bundle password.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  newWebServerCertificate: async(hostname, passphrase, altNames = false) => {
-    const csr = new CertificateRequest(hostname);
-    if (altNames && altNames.length > 0) {
-      csr.addAltNames(altNames);
+  newWebServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null, performedBy = undefined) => certService
+    .newWebServerCertificate(hostname, passphrase, altNames, bundleP12, password, performedBy),
+
+  /**
+   * Generate and sign a new LDAP server certificate.
+   *
+   * @param {string} hostname - Fully qualified domain name for the certificate.
+   * @param {string} passphrase - Passphrase to unlock the CA key.
+   * @param {string[]|false} [altNames=false] - Optional alternative names.
+   * @param {boolean} [bundleP12=false] - Whether to bundle as PKCS#12.
+   * @param {string|null} [password=null] - Optional bundle password.
+   * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
+   */
+  newLdapServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null, performedBy = undefined) => certService
+    .newLdapServerCertificate(hostname, passphrase, altNames, bundleP12, password, performedBy),
+
+  /**
+   * Generate and sign a new intermediate CA certificate.
+   *
+   * @param {string} hostname - Name for the intermediate CA.
+   * @param {string} passphrase - Passphrase to unlock the root CA key.
+   * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
+   */
+  newIntermediateCA: async(hostname, passphrase, intermediatePassphrase, performedBy = undefined) => certService
+    .newIntermediateCA(hostname, passphrase, intermediatePassphrase, performedBy),
+
+  /**
+   * Revoke a previously issued certificate.
+   *
+   * @param {string} serialNumber - Serial number of the certificate.
+   * @param {string} [reason] - Optional revocation reason.
+   * @returns {Promise<Object>} Result of the revocation request.
+   */
+  revokeCertificate: async(serialNumber, reason, performedBy = undefined) => {
+    const result = await revocation.revoke(serialNumber.toString(), reason, performedBy);
+    if (!result) {
+      return { error: 'Serial not found' };
     }
-    csr.sign();
-    if (!csr.verify()) {
-      return {
-        error: 'Unable to verify CSR',
-      };
-    }
-    const ca = await new CA();
-    ca.unlockCA(passphrase);
-    const certificate = await ca.signCSR(csr);
-    const privateKey = csr.getPrivateKey();
-    return {
-      certificate,
-      privateKey,
-      hostname,
-    };
+    return { revoked: true };
+  },
+
+  /**
+   * Retrieve the certificate revocation list.
+   *
+   * @returns {Promise<Object>} List of revoked certificates.
+   */
+  getCRL: async() => {
+    const revoked = await revocation.getRevoked();
+    return { revoked };
   },
 };

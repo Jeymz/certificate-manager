@@ -24,5 +24,6 @@ describe('validator', () => {
     };
     expect(validator.validateSchema('new', valid)).toBe(true);
     expect(validator.validateSchema('new', { hostname: 'x' })).toBe(false);
+    expect(validator.validateSchema('ldap', valid)).toBe(true);
   });
 });

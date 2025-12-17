@@ -1,6 +1,9 @@
 {
   "server": {
-    "port": 3000
+    "port": 3000,
+    "protocol": "https",
+    "key": "./ssl/server.key",
+    "cert": "./ssl/server.crt"
   },
   "storeDirectory": "./files",
   "subject": {
@@ -33,10 +36,12 @@
   "validDomains": [
     "example.com"
   ],
+  "requireIntermediate": true,
+  "defaultIntermediate": "intermediate",
   "extensions": {
     "CA": [
       {
-        "name": "basicContraints",
+        "name": "basicConstraints",
         "cA": true
       },
       {
@@ -46,7 +51,9 @@
         "keyEncipherment": true,
         "dataEncipherment": true,
         "keyCertSign": true
-      }
+      },
+      { "name": "subjectKeyIdentifier" },
+      { "name": "authorityKeyIdentifier" }
     ],
     "webServer": [
       {
@@ -62,7 +69,42 @@
       {
         "name": "extKeyUsage",
         "serverAuth": true
-      }
+      },
+      { "name": "subjectKeyIdentifier" },
+      { "name": "authorityKeyIdentifier" }
+    ],
+    "ldapServer": [
+      {
+        "name": "basicConstraints",
+        "cA": false
+      },
+      {
+        "name": "keyUsage",
+        "digitalSignature": true,
+        "keyEncipherment": true
+      },
+      {
+        "name": "extKeyUsage",
+        "serverAuth": true,
+        "clientAuth": true
+      },
+      { "name": "subjectKeyIdentifier" },
+      { "name": "authorityKeyIdentifier" }
+    ],
+    "intermediateCA": [
+      {
+        "name": "basicConstraints",
+        "cA": true,
+        "pathLenConstraint": 0
+      },
+      {
+        "name": "keyUsage",
+        "digitalSignature": true,
+        "keyCertSign": true,
+        "cRLSign": true
+      },
+      { "name": "subjectKeyIdentifier" },
+      { "name": "authorityKeyIdentifier" }
     ]
-  }  
+  }
 }
