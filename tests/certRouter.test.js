@@ -12,10 +12,15 @@ const controller = require('../src/controllers/certController');
 jest.mock('../src/utils/logger', () => ({ error: jest.fn(), info: jest.fn(), debug: jest.fn(), audit: { info: jest.fn() } }));
 const logger = require('../src/utils/logger');
 
+// Use the real validator implementation so schema checks run in tests
+const RealValidator = require('../src/resources/validator');
 var mockConfig = {
-  getValidator: jest.fn(() => ({ validateSchema: jest.fn(() => true) })),
+  // Provide a real validator instance with a minimal configuration
+  getValidator: jest.fn(() => new RealValidator({ validDomains: ['example.com'] })),
   isInitialized: jest.fn(() => true),
   getStoreDirectory: jest.fn(() => './files_test'),
+  getValidityLimits: jest.fn(() => ({ minDays: 1, maxDays: 397 })),
+  getProfileValidity: jest.fn(() => null),
 };
 jest.mock('../src/resources/config', () => jest.fn(() => mockConfig));
 
@@ -65,6 +70,46 @@ describe('certRouter', () => {
     expect(invalid.status).toBe(400);
   });
 
+  test('post /new rejects missing body', async() => {
+    const res = await request(app).post('/new');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid request body' });
+  });
+
+  test('post /new rejects validityDays out of allowed range', async() => {
+    controller.newWebServerCertificate.mockResolvedValue({ ok: true });
+    mockConfig.getValidityLimits.mockReturnValueOnce({ minDays: 1, maxDays: 50 });
+    const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p', validityDays: 90 });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'validityDays must be between 1 and 50' });
+  });
+
+  test('post /new accepts validityDays within allowed range', async() => {
+    controller.newWebServerCertificate.mockResolvedValue({ ok: true });
+    mockConfig.getValidityLimits.mockReturnValueOnce({ minDays: 1, maxDays: 50 });
+    const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p', validityDays: 30 });
+    expect(res.status).toBe(200);
+    expect(controller.newWebServerCertificate).toHaveBeenCalledWith('foo.example.com', 'p', undefined, undefined, undefined, 30, expect.any(String));
+  });
+
+  test('post /new uses profile default when configured', async() => {
+    controller.newWebServerCertificate.mockResolvedValue({ ok: true });
+    mockConfig.getProfileValidity.mockReturnValueOnce(45);
+    mockConfig.getValidityLimits.mockReturnValueOnce({ minDays: 1, maxDays: 50 });
+    const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p' });
+    expect(res.status).toBe(200);
+    expect(controller.newWebServerCertificate).toHaveBeenCalledWith('foo.example.com', 'p', undefined, undefined, undefined, 45, expect.any(String));
+  });
+
+  test('post /new rejects server-configured profile default outside allowed range', async() => {
+    controller.newWebServerCertificate.mockResolvedValue({ ok: true });
+    mockConfig.getProfileValidity.mockReturnValueOnce(9999);
+    mockConfig.getValidityLimits.mockReturnValueOnce({ minDays: 1, maxDays: 397 });
+    const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p' });
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({ error: 'Invalid server configuration for profile validity' });
+  });
+
   test('invalid passphrase handled gracefully', async() => {
     controller.newWebServerCertificate.mockImplementation(() => {
       throw new Error('CA Key is locked');
@@ -87,9 +132,19 @@ describe('certRouter', () => {
       .toHaveBeenCalledWith('ldap.example.com', 'p', undefined, undefined, undefined, expect.any(String));
   });
 
-  test('post /ldap rejects invalid body', async() => {
-    mockConfig.getValidator.mockReturnValueOnce({ validateSchema: jest.fn(() => false) });
+  test('post /ldap rejects missing body', async() => {
+    const res = await request(app).post('/ldap');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid request body' });
+  });
+
+  test('post /ldap rejects empty body', async() => {
     const res = await request(app).post('/ldap').send({});
+    expect(res.status).toBe(400);
+  });
+
+  test('post /ldap rejects invalid body', async() => {
+    const res = await request(app).post('/ldap').send({ invalid: true });
     expect(res.status).toBe(400);
   });
 
@@ -99,6 +154,31 @@ describe('certRouter', () => {
       .set('Content-Type', 'application/json')
       .send('"bad"');
     expect(res.status).toBe(400);
+  });
+
+  test('post /ldap rejects validityDays out of allowed range', async() => {
+    controller.newLdapServerCertificate.mockResolvedValue({ ldap: true });
+    mockConfig.getValidityLimits.mockReturnValueOnce({ minDays: 1, maxDays: 50 });
+    const res = await request(app).post('/ldap').send({ hostname: 'ldap.example.com', passphrase: 'p', validityDays: 90 });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'validityDays must be between 1 and 50' });
+  });
+
+  test('post /ldap accepts validityDays within allowed range', async() => {
+    controller.newLdapServerCertificate.mockResolvedValue({ ldap: true });
+    mockConfig.getValidityLimits.mockReturnValueOnce({ minDays: 1, maxDays: 50 });
+    const res = await request(app).post('/ldap').send({ hostname: 'ldap.example.com', passphrase: 'p', validityDays: 20 });
+    expect(res.status).toBe(200);
+    expect(controller.newLdapServerCertificate).toHaveBeenCalledWith('ldap.example.com', 'p', undefined, undefined, undefined, 20, expect.any(String));
+  });
+
+  test('post /ldap uses profile default when configured', async() => {
+    controller.newLdapServerCertificate.mockResolvedValue({ ldap: true });
+    mockConfig.getProfileValidity.mockReturnValueOnce(25);
+    mockConfig.getValidityLimits.mockReturnValueOnce({ minDays: 1, maxDays: 50 });
+    const res = await request(app).post('/ldap').send({ hostname: 'ldap.example.com', passphrase: 'p' });
+    expect(res.status).toBe(200);
+    expect(controller.newLdapServerCertificate).toHaveBeenCalledWith('ldap.example.com', 'p', undefined, undefined, undefined, 25, expect.any(String));
   });
 
   test('post /intermediate forwards to controller', async() => {
@@ -116,6 +196,12 @@ describe('certRouter', () => {
       .set('Content-Type', 'application/json')
       .send('"bad"');
     expect(res.status).toBe(400);
+  });
+
+  test('post /intermediate rejects missing body', async() => {
+    const res = await request(app).post('/intermediate');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid request body' });
   });
 
   test('post /intermediate rejects invalid body', async() => {
@@ -146,6 +232,12 @@ describe('certRouter', () => {
       .set('Content-Type', 'application/json')
       .send('"bad"');
     expect(res.status).toBe(400);
+  });
+
+  test('post /revoke rejects missing body', async() => {
+    const res = await request(app).post('/revoke');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid request body' });
   });
 
   test('post /revoke rejects invalid body', async() => {

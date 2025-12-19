@@ -26,7 +26,7 @@ module.exports = {
    * @param {string|null} [password=null] - Optional bundle password.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  async newWebServerCertificate(hostname, passphrase, altNames = false, bundleP12 = false, password = null, performedBy = undefined) {
+  async newWebServerCertificate(hostname, passphrase, altNames = false, bundleP12 = false, password = null, validityDays = null, performedBy = undefined) {
     const csr = new CertificateRequest(hostname);
     if (altNames && altNames.length > 0) {
       csr.addAltNames(altNames);
@@ -42,7 +42,7 @@ module.exports = {
     }
     const ca = await new CA(config.getDefaultIntermediate());
     ca.unlockCA(passphrase, performedBy);
-    const { certificate, serial, expiration } = await ca.signCSR(csr);
+    const { certificate, serial, expiration, validityDaysApplied } = await ca.signCSR(csr, { validityDays });
 
     const store = config.getStoreDirectory();
     const certPath = path.join(store, 'newCerts', `${hostname}.cert.crt`);
@@ -58,7 +58,7 @@ module.exports = {
     await fs.writeFile(privateKeyPath, privateKey, { encoding: 'utf-8' });
 
     await revocation.add(serial, hostname, expiration.toISOString());
-    await ca.updateLog(csrPath, certPath, privateKeyPath, expiration, hostname);
+    await ca.updateLog(csrPath, certPath, privateKeyPath, expiration, hostname, validityDaysApplied);
 
     const caChain = ca.getCertChain();
     const chain = `${certificate}${caChain}`;
@@ -79,6 +79,8 @@ module.exports = {
       subject: hostname,
       serialNumber: serial.toString(),
       performedBy,
+      validityDaysRequested: validityDays,
+      validityDaysApplied,
     });
     return result;
   },
@@ -93,7 +95,7 @@ module.exports = {
    * @param {string|null} [password=null] - Optional bundle password.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  async newLdapServerCertificate(hostname, passphrase, altNames = false, bundleP12 = false, password = null, performedBy = undefined) {
+  async newLdapServerCertificate(hostname, passphrase, altNames = false, bundleP12 = false, password = null, validityDays = null, performedBy = undefined) {
     const csr = new CertificateRequest(hostname);
     csr.setCertType('ldapServer');
     if (altNames && altNames.length > 0) {
@@ -110,7 +112,7 @@ module.exports = {
     }
     const ca = await new CA(config.getDefaultIntermediate());
     ca.unlockCA(passphrase, performedBy);
-    const { certificate, serial, expiration } = await ca.signCSR(csr);
+    const { certificate, serial, expiration, validityDaysApplied } = await ca.signCSR(csr, { validityDays });
 
     const store = config.getStoreDirectory();
     const certPath = path.join(store, 'newCerts', `${hostname}.cert.crt`);
@@ -126,7 +128,7 @@ module.exports = {
     await fs.writeFile(privateKeyPath, privateKey, { encoding: 'utf-8' });
 
     await revocation.add(serial, hostname, expiration.toISOString());
-    await ca.updateLog(csrPath, certPath, privateKeyPath, expiration, hostname);
+    await ca.updateLog(csrPath, certPath, privateKeyPath, expiration, hostname, validityDaysApplied);
 
     const caChain = ca.getCertChain();
     const chain = `${certificate}${caChain}`;
@@ -147,6 +149,8 @@ module.exports = {
       subject: hostname,
       serialNumber: serial.toString(),
       performedBy,
+      validityDaysRequested: validityDays,
+      validityDaysApplied,
     });
     return result;
   },

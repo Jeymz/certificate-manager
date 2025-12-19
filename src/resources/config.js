@@ -112,6 +112,34 @@ class Config {
     return JSON.parse(JSON.stringify(this.#private.configuration.extensions));
   }
 
+  /**
+   * Retrieve global validity limits (days).
+   * @returns {{minDays:number,maxDays:number}}
+   */
+  getValidityLimits() {
+    const limits = this.#private.configuration.validityLimits || {};
+    return {
+      minDays: limits.minDays || 1,
+      maxDays: limits.maxDays || 397,
+    };
+  }
+
+  /**
+   * Retrieve configured default validityDays for a profile if present.
+   * @param {string} profile
+   * @returns {number|null}
+   */
+  getProfileValidity(profile) {
+    if (Object.keys(this.#private.configuration?.extensions).indexOf(profile) < 0) {
+      return null;
+    }
+    // allow optional metadata object on profile called _meta.validityDays
+    if (this.#private.configuration.profileMetadata && this.#private.configuration.profileMetadata[profile] && this.#private.configuration.profileMetadata[profile].validityDays) {
+      return this.#private.configuration.profileMetadata[profile].validityDays;
+    }
+    return null;
+  }
+
   getDefaultIntermediate() {
     return this.#private.defaultIntermediate;
   }

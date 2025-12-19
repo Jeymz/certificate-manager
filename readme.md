@@ -41,46 +41,60 @@ dependency. Installation differs slightly for each case.
 2. Edit the configuration to best fit your needs
 
    ```json
-   ...
-   "storeDirectory": "./files", // <- This is where your CA and certs will be saved
-   "subject": {
-     "email": {
-       "prompt": "Email address for certificate administrator",
-       "shortName": "E",
-       "default": "something@example.com" // <- Email displayed on certificates
+   {
+     "storeDirectory": "./files",
+
+     "subject": {
+       "email": {
+         "prompt": "Email address for certificate administrator",
+         "shortName": "E",
+         "default": "something@example.com"
+       },
+       "organization": {
+         "prompt": "Organization or Company Name",
+         "shortName": "O",
+         "default": "Example Home Lab Industries INC."
+       },
+       "locality": {
+         "prompt": "City or Locality",
+         "shortName": "L",
+         "default": "New York"
+       },
+       "state": {
+         "prompt": "State or Region",
+         "shortName": "ST",
+         "default": "New York"
+       },
+       "country": {
+         "prompt": "Country code (eg. US)",
+         "shortName": "C",
+         "default": "US"
+       }
      },
-     "organization": {
-       "prompt": "Organization or Company Name",
-       "shortName": "O",
-       "default": "Example Home Lab Industries INC."  // <- Organization or Company Name
+
+     "validDomains": [
+       "example.com"
+     ],
+
+     "requireIntermediate": true,
+     "defaultIntermediate": "intermediate",
+
+     "validityLimits": {
+       "minDays": 1,
+       "maxDays": 397
      },
-     "locality": {
-       "prompt": "City or Locality",
-       "shortName": "L",
-       "default": "New York" // <- City or Locality
-     },
-     "state": {
-       "prompt": "State or Region",
-       "shortName": "ST",
-       "default": "New York" // <- State or Province
-     },
-     "country": {
-       "prompt": "Country code (eg. US)",
-       "shortName": "C",
-       "default": "US" // <- 2 character Country Code
+
+     "profileMetadata": {
+       "webServer": { "validityDays": 90 },
+       "ldapServer": { "validityDays": 30 }
      }
-    },
-   "validDomains": [
-     "example.com" // <- This is used to validate cert request hostnames not alternate names
-   ],
-   "requireIntermediate": true, // <- Prevents root from issuing leaf certs
-   "defaultIntermediate": "intermediate", // <- Intermediate CA used for server certificates
-   ...
+   }
    ```
 
 3. Set a CA passphrase in your environment variables and run setup.
-   - Note: This passphrase only be set once and will be needed to submit future requests
-   - Note: This will install only production needed dependencies
+
+   - This passphrase is set once and is required for future requests.
+   - This installs only production dependencies.
 
    ```cmd
    SET CAPASS=SecretPassphrase && npm run setup
@@ -100,7 +114,7 @@ dependency. Installation differs slightly for each case.
 
    Windows users can run `npm run win` for development on Windows.
 
-5. Submit a post request to the `http://localhost:{{SERVER.PORT}}/new` endpoint with the following json body
+5. Submit a POST request to `http://localhost:{{SERVER.PORT}}/new` to issue a web server certificate
 
    ```json
    {
@@ -110,9 +124,14 @@ dependency. Installation differs slightly for each case.
        "certs.example.info",
        "localhost"
      ],
-     "passphrase": "SecretPassphrase"
+     "passphrase": "SecretPassphrase",
+     "validityDays": 90
    }
    ```
+
+   If `validityDays` is omitted, the server uses the profile default (when configured)
+   or falls back to the standard one‑year lifetime. Requests outside the configured
+   limits are rejected.
 
 6. Submit a request to `http://localhost:{{SERVER.PORT}}/ldap` to generate an LDAP server certificate
 
@@ -122,60 +141,90 @@ dependency. Installation differs slightly for each case.
      "altNames": [
        "ldap.example.com"
      ],
-     "passphrase": "SecretPassphrase"
+     "passphrase": "SecretPassphrase",
+     "validityDays": 30
    }
    ```
 
-7. All your web certs will be saved to the directory specified in the config in the `newCerts` directory. Private keys are all in the `private` directory. Your Root CA cert is in the `certs` folder and will need to be applied to all machines as a Trusted Root Certificate. If `"bundleP12": true` is included in the request body, a PKCS#12 bundle will also be saved as `newCerts/<hostname>.bundle.p12`.
-8. (Optional) Create an intermediate CA by posting to `http://localhost:{{SERVER.PORT}}/intermediate` or running:
+7. Issued certificates are written to the directory specified by `storeDirectory`.
+
+   - Leaf certificates: `newCerts/`
+   - Private keys: `private/`
+   - Root CA certificate: `certs/`
+
+   If `"bundleP12": true` is included in the request body, a PKCS#12 bundle is also
+   written to `newCerts/<hostname>.bundle.p12`.
+
+8. (Optional) Create an intermediate CA by posting to
+   `http://localhost:{{SERVER.PORT}}/intermediate` or running:
 
    ```cmd
    CAPASS=SecretPassphrase node scripts/setup-intermediate.js intermediate-name
    ```
 
-   This intermediate certificate will be placed under `files/intermediates/` and used by default for server certificates if `defaultIntermediate` is set in the configuration. When `requireIntermediate` is `true`, the application refuses to issue leaf certificates with the root key. When a server certificate is issued it is saved alongside a `.chain.crt` file containing both the server and intermediate certificates and the HTTP response includes this chain in a `chain` property. Present this chain so clients can validate the path using only the trusted root certificate.
+   When `requireIntermediate` is `true`, the application refuses to issue leaf
+   certificates directly from the root key. Issued certificates include a
+   `.chain.crt` file containing both the leaf and intermediate certificates.
+
+## Certificate lifetime policy
+
+Leaf certificate lifetimes are configurable globally and per-profile. The server
+enforces minimum and maximum validity limits, supports profile-specific defaults,
+and allows clients to request a specific lifetime when issuing certificates.
+
+CA and intermediate certificate lifetimes are controlled separately by setup
+scripts and environment configuration and are not affected by request-level
+settings.
 
 ## Audit logging
 
-This project now includes audit logging for privileged operations (for example: issuing a new CA or intermediate, revoking certificates, and other actions that use the CA private key).
+This project includes audit logging for privileged operations such as issuing
+certificates, creating intermediates, and revoking certificates.
 
-What is logged
+### What is logged
 
-- Timestamp and operation type (create, revoke, intermediate, etc.)
-- Username/actor or source IP when available (depends on how you authenticate/forward requests)
-- Target resource (hostname, intermediate name, certificate fingerprint or serial)
-- Outcome (success or failure) and an error message when applicable
-- Minimal context required to reproduce the action (request body fields such as hostname and altNames are recorded, but private key material and passphrases are never logged)
+- Timestamp and operation type (create, revoke, intermediate, issue, etc.)
+- Username/actor or source IP (when available)
+- Target resource (hostname, intermediate name, certificate serial or fingerprint)
+- Outcome (success or failure) and error details when applicable
+- Certificate lifetime details (requested vs applied validity in days)
+- Minimal request context required for traceability
 
-How to enable and configure
+Sensitive material such as private keys and passphrases is never logged.
 
-- The audit logger is wired into the application and audit calls are emitted by the application as part of privileged operations. Audit entries are emitted as JSON objects (one JSON object per line) and include a timestamp.
-- By default audit entries are written to the console (stdout) in JSON format. To write audit entries to a dedicated file, set the `AUDIT_LOG_FILE` environment variable to a filesystem path.
-- The audit logger uses a file transport (when `AUDIT_LOG_FILE` is set) with the following defaults: JSON format with a timestamp, maxsize = 1,048,576 bytes (1 MB) and maxFiles = 5 for simple rotation.
-- Application logs (info/debug/error) are controlled separately by `LOG_FILE` and `LOG_LEVEL`. Setting `LOG_FILE` does not affect where audit logs are stored.
+### Configuration
 
-Environment variables (audit-related)
+- Audit events are emitted automatically during privileged operations.
+- Audit entries are JSON objects (one per line) and include a timestamp.
+- By default audit logs are written to stdout.
+- To write audit logs to a file, set the `AUDIT_LOG_FILE` environment variable.
+- Log rotation defaults to 1 MB per file with up to 5 retained files.
 
-- `AUDIT_LOG_FILE` – path to the audit log file. When present audit entries are appended to this file (JSON, timestamped). If omitted, audit entries are written to stdout.
-- `LOG_FILE` – path to the general application log file (separate from `AUDIT_LOG_FILE`).
-- `LOG_LEVEL` – controls the general logger verbosity (default: `info`). Audit entries use a dedicated audit logger and are emitted regardless of `LOG_LEVEL`.
+Application logs (`LOG_FILE`, `LOG_LEVEL`) are managed separately and do not affect
+audit logging behavior.
 
-Example audit log entry (JSON, one line per entry)
+### Example audit log entry
 
 ```json
-{"ts":"2025-10-15T12:34:56.789Z","level":"audit","actor":"192.0.2.1","operation":"issue_certificate","target":"example.com","result":"success","serial":"01AB23CD","details":{"altNames":["example.com","www.example.com"],"bundleP12":true}}
+{
+  "ts": "2025-10-15T12:34:56.789Z",
+  "level": "audit",
+  "actor": "192.0.2.1",
+  "operation": "issue_certificate",
+  "target": "example.com",
+  "result": "success",
+  "serial": "01AB23CD",
+  "details": {
+    "altNames": ["example.com", "www.example.com"],
+    "validityDaysRequested": 90,
+    "validityDaysApplied": 90
+  }
+}
 ```
-
-Notes and best practices
-
-- Sensitive information: The implementation intentionally avoids logging sensitive secrets such as private keys and passphrases. Only operational metadata and request-level context are recorded.
-- Rotation & retention: Use your system log rotation or a central log collector (ELK/Opensearch, Splunk, etc.) to rotate and retain audit logs according to your security policy.
-- Time synchronization: Ensure your server's clock is synchronized (NTP) so timestamps can be correlated across systems.
-- Forwarding logs: If you forward logs to a central collector, make sure transport and storage are protected (TLS, access controls).
 
 ## Roadmap / Features
 
 - Create intermediate CAs using the setup script or `/intermediate` endpoint
-- Allow more customization regarding certificate types and subjects
-- Alert administrator when certificate is about to expire
-- Enable admins to auto issue new certificates and send them to the certificate administrator
+- Additional certificate profile customization
+- Certificate expiration alerts
+- Automatic renewal and delivery workflows

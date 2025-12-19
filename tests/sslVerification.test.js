@@ -9,7 +9,7 @@ let createIntermediate;
 let controller;
 
 beforeAll(async() => {
-  jest.setTimeout(30000);
+  // jest.setTimeout(30000);
   jest.resetModules();
   process.env.CAPASS = 'pass';
   await fs.mkdir(path.join(__dirname, '../files_test'), { recursive: true });
@@ -18,15 +18,7 @@ beforeAll(async() => {
   controller = require('../src/controllers/certController');
   await createCA();
   const intDir = path.join(__dirname, '../files_test/intermediates');
-  await createIntermediate('intermediate.example.com', 'pass');
-  await fs.rename(
-    path.join(intDir, 'intermediate.example.com.cert.crt'),
-    path.join(intDir, 'intermediate.cert.crt'),
-  );
-  await fs.rename(
-    path.join(intDir, 'intermediate.example.com.key.pem'),
-    path.join(intDir, 'intermediate.key.pem'),
-  );
+  await createIntermediate('intermediateCA.example.com', 'pass');
 });
 
 afterAll(async() => {
@@ -36,7 +28,7 @@ afterAll(async() => {
 
 test('intermediate certificate validates with root CA', async() => {
   const rootPem = await fs.readFile(path.join(__dirname, '../files_test/certs/ca.cert.crt'), 'utf-8');
-  const intermediatePem = await fs.readFile(path.join(__dirname, '../files_test/intermediates/intermediate.cert.crt'), 'utf-8');
+  const intermediatePem = await fs.readFile(path.join(__dirname, '../files_test/intermediates/intermediateCA.example.com.cert.crt'), 'utf-8');
   const rootCert = forge.pki.certificateFromPem(rootPem);
   const intermediateCert = forge.pki.certificateFromPem(intermediatePem);
   const caStore = forge.pki.createCaStore([rootCert]);

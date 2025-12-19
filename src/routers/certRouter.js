@@ -12,7 +12,7 @@ const router = express.Router();
 
 router.post('/new', async(req, res) => {
   try {
-    if (!req.body || typeof req.body !== 'object') {
+    if (!req.body || typeof req.body !== 'object' || Object.keys(req.body).length === 0) {
       logger.error('Invalid request body: must be an object');
       return res.status(400).send({
         error: 'Invalid request body',
@@ -31,17 +31,51 @@ router.post('/new', async(req, res) => {
       passphrase,
       bundleP12,
       password,
+      validityDays,
     } = req.body;
 
-    // deepcode ignore PT: All request body parameters are validated by the schema on line 22
-    const newCert = await controller.newWebServerCertificate(
-      hostname,
-      passphrase,
-      altNames,
-      bundleP12,
-      password,
-      req.ip,
-    );
+    // Enforce validity limits from config (safe when tests use a mock config)
+    const limits = (config.getValidityLimits && config.getValidityLimits()) || { minDays: 1, maxDays: 397 };
+    const profileDefault = (config.getProfileValidity && config.getProfileValidity('webServer')) || null;
+    let finalValidity = null;
+    if (typeof validityDays !== 'undefined' && validityDays !== null) {
+      if (validityDays < limits.minDays || validityDays > limits.maxDays) {
+        logger.error(`Requested validityDays ${validityDays} out of allowed range`);
+        return res.status(400).send({ error: `validityDays must be between ${limits.minDays} and ${limits.maxDays}` });
+      }
+      finalValidity = validityDays;
+    } else if (profileDefault) {
+      // use profile default if configured (still enforce limits)
+      if (profileDefault < limits.minDays || profileDefault > limits.maxDays) {
+        logger.error(`Configured profile default validityDays ${profileDefault} out of allowed range`);
+        return res.status(500).send({ error: 'Invalid server configuration for profile validity' });
+      }
+      finalValidity = profileDefault;
+    }
+
+    let newCert;
+    if (finalValidity === null) {
+      // deepcode ignore PT: All request body parameters are validated by the schema on line 22
+      newCert = await controller.newWebServerCertificate(
+        hostname,
+        passphrase,
+        altNames,
+        bundleP12,
+        password,
+        req.ip,
+      );
+    } else {
+      // deepcode ignore PT: All request body parameters are validated by the schema on line 22
+      newCert = await controller.newWebServerCertificate(
+        hostname,
+        passphrase,
+        altNames,
+        bundleP12,
+        password,
+        finalValidity,
+        req.ip,
+      );
+    }
     return res.status(200).json(newCert);
   } catch (err) {
     logger.error(`Error creating certificate: ${err.message}`);
@@ -51,7 +85,7 @@ router.post('/new', async(req, res) => {
 
 router.post('/ldap', async(req, res) => {
   try {
-    if (!req.body || typeof req.body !== 'object') {
+    if (!req.body || typeof req.body !== 'object' || Object.keys(req.body).length === 0) {
       logger.error('Invalid request body: must be an object');
       return res.status(400).send({
         error: 'Invalid request body',
@@ -70,19 +104,51 @@ router.post('/ldap', async(req, res) => {
       passphrase,
       bundleP12,
       password,
+      validityDays,
     } = req.body;
 
-    
-    // deepcode ignore PT: All request body parameters are validated by the schema on line 61
-    const newCert = await controller.newLdapServerCertificate(
-      hostname,
-      passphrase,
-      altNames,
-      bundleP12,
-      password,
-      req.ip,
-    );
-    return res.status(200).json(newCert);
+    // Enforce validity limits from config for LDAP profile
+    const limitsLdap = (config.getValidityLimits && config.getValidityLimits()) || { minDays: 1, maxDays: 397 };
+    const profileDefaultLdap = (config.getProfileValidity && config.getProfileValidity('ldapServer')) || null;
+    let finalValidityLdap = null;
+    if (typeof validityDays !== 'undefined' && validityDays !== null) {
+      if (validityDays < limitsLdap.minDays || validityDays > limitsLdap.maxDays) {
+        logger.error(`Requested validityDays ${validityDays} out of allowed range`);
+        return res.status(400).send({ error: `validityDays must be between ${limitsLdap.minDays} and ${limitsLdap.maxDays}` });
+      }
+      finalValidityLdap = validityDays;
+    } else if (profileDefaultLdap) {
+      if (profileDefaultLdap < limitsLdap.minDays || profileDefaultLdap > limitsLdap.maxDays) {
+        logger.error(`Configured profile default validityDays ${profileDefaultLdap} out of allowed range`);
+        return res.status(500).send({ error: 'Invalid server configuration for profile validity' });
+      }
+      finalValidityLdap = profileDefaultLdap;
+    }
+
+    let newCertLdap;
+    if (finalValidityLdap === null) {
+      // deepcode ignore PT: All request body parameters are validated by the schema on line 96
+      newCertLdap = await controller.newLdapServerCertificate(
+        hostname,
+        passphrase,
+        altNames,
+        bundleP12,
+        password,
+        req.ip,
+      );
+    } else {
+      // deepcode ignore PT: All request body parameters are validated by the schema on line 96
+      newCertLdap = await controller.newLdapServerCertificate(
+        hostname,
+        passphrase,
+        altNames,
+        bundleP12,
+        password,
+        finalValidityLdap,
+        req.ip,
+      );
+    }
+    return res.status(200).json(newCertLdap);
   } catch (err) {
     logger.error(`Error creating certificate: ${err.message}`);
     return res.status(400).send({ error: 'Unable to process request' });
@@ -91,7 +157,7 @@ router.post('/ldap', async(req, res) => {
 
 router.post('/intermediate', async(req, res) => {
   try {
-    if (!req.body || typeof req.body !== 'object') {
+    if (!req.body || typeof req.body !== 'object' || Object.keys(req.body).length === 0) {
       logger.error('Invalid request body: must be an object');
       return res.status(400).send({ error: 'Invalid request body' });
     }
@@ -116,7 +182,7 @@ router.post('/intermediate', async(req, res) => {
 
 router.post('/revoke', async(req, res) => {
   try {
-    if (!req.body || typeof req.body !== 'object') {
+    if (!req.body || typeof req.body !== 'object' || Object.keys(req.body).length === 0) {
       logger.error('Invalid request body: must be an object');
       return res.status(400).send({ error: 'Invalid request body' });
     }

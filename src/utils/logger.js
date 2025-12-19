@@ -5,14 +5,15 @@ const { createLogger, format, transports } = require('winston');
  * @module logger
  */
 
-const loggerTransports = [
+const loggerTransports = [];
+loggerTransports.push(
   new transports.Console({
     format: format.combine(
       format.colorize(),
       format.simple(),
     ),
   }),
-];
+);
 
 if (process.env.LOG_FILE) {
   loggerTransports.push(

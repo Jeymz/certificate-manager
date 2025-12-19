@@ -54,7 +54,7 @@ describe('audit logging', () => {
   });
 
   test('logs certificate issuance with metadata', async() => {
-    await service.newWebServerCertificate('foo.example.com', 'pass', false, false, null, '1.2.3.4');
+    await service.newWebServerCertificate('foo.example.com', 'pass', false, false, null, null, '1.2.3.4');
     expect(logger.audit.info).toHaveBeenCalled();
     const evt = logger.audit.info.mock.calls[0][0];
     expect(evt.eventType).toBe('CERT_ISSUE');

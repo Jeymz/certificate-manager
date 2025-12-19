@@ -54,11 +54,33 @@ describe('config resource', () => {
 
   test('getDefaultIntermediate returns configured value', () => {
     const config = configFactory();
-    expect(config.getDefaultIntermediate()).toBe('intermediate');
+    expect(config.getDefaultIntermediate()).toBe('intermediateCA.example.com');
   });
 
   test('getRequireIntermediate returns configured value', () => {
     const config = configFactory();
     expect(config.getRequireIntermediate()).toBe(true);
+  });
+
+  test('getValidityLimits returns defaults and configured limits', () => {
+    const config = configFactory();
+    const limits = config.getValidityLimits();
+    expect(limits).toHaveProperty('minDays');
+    expect(limits).toHaveProperty('maxDays');
+  });
+
+  test('getProfileValidity returns configured profile metadata or null', () => {
+    const fs = require('fs');
+    // Load the defaults.json and modify a copy to include profileMetadata
+    const defaultsPath = require('path').join(__dirname, '..', 'config', 'defaults.json');
+    const original = fs.readFileSync(defaultsPath, 'utf8');
+    const parsed = JSON.parse(original);
+    parsed.profileMetadata = { webServer: { validityDays: 90 } };
+    jest.spyOn(fs, 'readFileSync').mockReturnValueOnce(JSON.stringify(parsed));
+    jest.resetModules();
+    const freshFactory = require('../src/resources/config');
+    const fresh = freshFactory();
+    expect(fresh.getProfileValidity('webServer')).toBe(90);
+    fs.readFileSync.mockRestore();
   });
 });

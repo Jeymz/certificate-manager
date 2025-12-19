@@ -21,6 +21,10 @@ module.exports = {
         type: 'string',
         minLength: 1,
       },
+      validityDays: {
+        type: 'integer',
+        minimum: 1,
+      },
       bundleP12: {
         type: 'boolean',
       },
@@ -56,6 +60,10 @@ module.exports = {
       passphrase: {
         type: 'string',
         minLength: 1,
+      },
+      validityDays: {
+        type: 'integer',
+        minimum: 1,
       },
       bundleP12: {
         type: 'boolean',

@@ -37,7 +37,7 @@
     "example.com"
   ],
   "requireIntermediate": true,
-  "defaultIntermediate": "intermediate",
+  "defaultIntermediate": "intermediateCA.example.com",
   "extensions": {
     "CA": [
       {
@@ -106,5 +106,13 @@
       { "name": "subjectKeyIdentifier" },
       { "name": "authorityKeyIdentifier" }
     ]
+  },
+  "profileMetadata": {
+    "webServer": { "validityDays": 90 },
+    "ldapServer": { "validityDays": 30 }
+  },
+  "validityLimits": {
+    "minDays": 1,
+    "maxDays": 397
   }
 }

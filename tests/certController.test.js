@@ -1,3 +1,4 @@
+// Keep revocation and crypto controlled in tests; mock CertificateRequest and CA for stable controller tests
 jest.mock('../src/resources/certificateRequest');
 jest.mock('../src/resources/ca');
 jest.mock('../src/resources/revocation');
@@ -13,6 +14,7 @@ const CertificateRequest = require('../src/resources/certificateRequest');
 const CA = require('../src/resources/ca');
 const revocation = require('../src/resources/revocation');
 const controller = require('../src/controllers/certController');
+const config = require('../src/resources/config')();
 
 describe('certController', () => {
   beforeEach(() => {
@@ -52,7 +54,32 @@ describe('certController', () => {
   test('newWebServerCertificate returns data', async() => {
     const result = await controller.newWebServerCertificate('foo.example.com', 'pass');
     expect(result).toEqual({ certificate: 'cert', privateKey: 'priv', hostname: 'foo.example.com', chain: 'certcaCertroot' });
-    expect(CA).toHaveBeenCalledWith('intermediate');
+    expect(CA).toHaveBeenCalledWith('intermediateCA.example.com');
+  });
+
+  test('returns error when CSR verification fails', async() => {
+    CertificateRequest.mockImplementation(() => ({
+      addAltNames: jest.fn(),
+      sign: jest.fn(),
+      setCertType: jest.fn(),
+      verify: jest.fn(() => false),
+      getPrivateKey: jest.fn(() => 'priv'),
+      getCSR: jest.fn(() => 'csr'),
+      getHostname: jest.fn(() => 'foo.example.com'),
+      getCertType: jest.fn(() => 'webServer'),
+      getPkcs12Bundle: jest.fn(() => 'p12data'),
+    }));
+    const result = await controller.newWebServerCertificate('bad.example.com', 'pass');
+    expect(result).toEqual({ error: 'Unable to verify CSR' });
+  });
+
+  test('rejects issuance when requireIntermediate is true and no default configured', async() => {
+    const spyDefault = jest.spyOn(config, 'getDefaultIntermediate').mockReturnValueOnce(null);
+    const spyRequire = jest.spyOn(config, 'getRequireIntermediate').mockReturnValueOnce(true);
+    const result = await controller.newWebServerCertificate('foo.example.com', 'pass');
+    expect(result).toEqual({ error: 'Root CA may not issue leaf certs' });
+    spyDefault.mockRestore();
+    spyRequire.mockRestore();
   });
 
   test('alt names passed to request', async() => {
@@ -101,5 +128,13 @@ describe('certController', () => {
     revocation.getRevoked.mockResolvedValue([{ serialNumber: '1' }]);
     const result = await controller.getCRL();
     expect(result).toEqual({ revoked: [{ serialNumber: '1' }] });
+  });
+
+  test('newLdapServerCertificate sets LDAP cert type', async() => {
+    await controller.newLdapServerCertificate('ldap.example.com', 'pass', ['alt.example.com']);
+    expect(CertificateRequest).toHaveBeenCalledWith('ldap.example.com');
+    const reqInstance = CertificateRequest.mock.results[0].value;
+    expect(reqInstance.setCertType).toHaveBeenCalledWith('ldapServer');
+    expect(reqInstance.addAltNames).toHaveBeenCalledWith(['alt.example.com']);
   });
 });

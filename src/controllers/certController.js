@@ -12,9 +12,10 @@ module.exports = {
    * @param {string|null} [password=null] - Optional bundle password.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  newWebServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null, performedBy = undefined) => certService
-    .newWebServerCertificate(hostname, passphrase, altNames, bundleP12, password, performedBy),
-
+  newWebServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null, validityDays = null, performedBy = undefined) => {
+    return await certService.newWebServerCertificate(hostname, passphrase, altNames, bundleP12, password, validityDays, performedBy);
+  },
+  
   /**
    * Generate and sign a new LDAP server certificate.
    *
@@ -25,8 +26,9 @@ module.exports = {
    * @param {string|null} [password=null] - Optional bundle password.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  newLdapServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null, performedBy = undefined) => certService
-    .newLdapServerCertificate(hostname, passphrase, altNames, bundleP12, password, performedBy),
+  newLdapServerCertificate: async(hostname, passphrase, altNames = false, bundleP12 = false, password = null, validityDays = null, performedBy = undefined) => {
+    return await certService.newLdapServerCertificate(hostname, passphrase, altNames, bundleP12, password, validityDays, performedBy);
+  },
 
   /**
    * Generate and sign a new intermediate CA certificate.
@@ -35,8 +37,9 @@ module.exports = {
    * @param {string} passphrase - Passphrase to unlock the root CA key.
    * @returns {Promise<Object>} Resolves with certificate and key PEM strings.
    */
-  newIntermediateCA: async(hostname, passphrase, intermediatePassphrase, performedBy = undefined) => certService
-    .newIntermediateCA(hostname, passphrase, intermediatePassphrase, performedBy),
+  newIntermediateCA: async(hostname, passphrase, intermediatePassphrase, performedBy = undefined) => {
+    return await certService.newIntermediateCA(hostname, passphrase, intermediatePassphrase, performedBy);
+  },
 
   /**
    * Revoke a previously issued certificate.
@@ -52,7 +55,7 @@ module.exports = {
     }
     return { revoked: true };
   },
-
+  
   /**
    * Retrieve the certificate revocation list.
    *

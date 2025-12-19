@@ -138,7 +138,7 @@ module.exports = class CA {
    * @returns {Promise<string>} Resolves to the PEM encoded certificate.
    * @throws {Error} If the CA key is locked or the CSR is invalid.
    */
-  async signCSR(CSR) {
+  async signCSR(CSR, options = {}) {
     if (!this.#private.caKey) {
       throw new Error(`CA key is locked; unable to sign certificate for ${CSR.getHostname()}`);
     }
@@ -151,10 +151,24 @@ module.exports = class CA {
     const newCert = forge.pki.createCertificate();
     const serial = await this.getSerial();
     newCert.serialNumber = parseInt(serial, 10).toString(16);
-    const expiration = new Date();
-    expiration.setFullYear(expiration.getFullYear() + 1);
-    newCert.validity.notBefore = new Date();
-    newCert.validity.notAfter = expiration;
+    const now = new Date();
+    newCert.validity.notBefore = now;
+    let validityDaysApplied = null;
+    // This check is a failsafe in the event signCSR options.validityDays does not exist or are not validated upstream
+    if (typeof options?.validityDays === 'number' && Number.isInteger(options.validityDays) && options.validityDays >= 1) {
+      validityDaysApplied = options.validityDays;
+      const expiration = new Date(now.getTime());
+      expiration.setDate(expiration.getDate() + validityDaysApplied);
+      newCert.validity.notAfter = expiration;
+    } else {
+      // default to 1 year
+      const expiration = new Date();
+      expiration.setFullYear(expiration.getFullYear() + 1);
+      newCert.validity.notAfter = expiration;
+      // compute days between now and expiration (approx)
+      const diffMs = newCert.validity.notAfter - now;
+      validityDaysApplied = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+    }
     newCert.setSubject(csr.subject.attributes);
     const extensionConfigs = config.getCertExtensions();
     const extensions = extensionConfigs[CSR.getCertType()];
@@ -172,7 +186,7 @@ module.exports = class CA {
     newCert.setExtensions(extensions);
     newCert.sign(caKey, forge.md.sha256.create());
     const certPem = forge.pki.certificateToPem(newCert);
-    return { certificate: certPem, serial, expiration };
+    return { certificate: certPem, serial, expiration: newCert.validity.notAfter, validityDaysApplied };
   }
 
   /**
@@ -185,7 +199,7 @@ module.exports = class CA {
    * @param {string} hostname - Hostname the certificate was issued for.
    * @returns {Promise<void>}
    */
-  async updateLog(csrPath, certPath, privateKeyPath, expiration, hostname) {
+  async updateLog(csrPath, certPath, privateKeyPath, expiration, hostname, validityDaysApplied = null) {
     const log = JSON.parse(await fs.readFile(
       this.#private.store.log,
       { encoding: 'utf-8' },
@@ -196,6 +210,7 @@ module.exports = class CA {
       privateKey: privateKeyPath,
       expiration,
       hostname,
+      validityDaysApplied,
     });
     await fs.writeFile(
       this.#private.store.log,
