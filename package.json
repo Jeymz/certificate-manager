@@ -51,8 +51,8 @@
     "env": {
       "NODE_ENV": "development",
       "LOG_LEVEL": "info",
-      "LOG_FILE": "files/file_log.json",
-      "AUDIT_LOG_FILE": "files/auditLog.json"
+      "LOG_FILE": "logs/file_log.json",
+      "AUDIT_LOG_FILE": "logs/auditLog.json"
     }
   }
 }

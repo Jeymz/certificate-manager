@@ -17,7 +17,6 @@ beforeAll(async() => {
   createIntermediate = require('../scripts/setup-intermediate');
   controller = require('../src/controllers/certController');
   await createCA();
-  const intDir = path.join(__dirname, '../files_test/intermediates');
   await createIntermediate('intermediateCA.example.com', 'pass');
 });
 
