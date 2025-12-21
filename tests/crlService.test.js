@@ -4,6 +4,7 @@ jest.mock('../src/resources/config', () => () => ({
   getDefaultIntermediate: jest.fn(() => null),
   getStoreDirectory: jest.fn(() => './files_test'),
 }));
+jest.mock('../src/resources/crlNumber');
 jest.mock('../src/utils/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
@@ -12,6 +13,7 @@ jest.mock('../src/utils/logger', () => ({
 const forge = require('node-forge');
 const CA = require('../src/resources/ca');
 const revocation = require('../src/resources/revocation');
+const crlNumberStore = require('../src/resources/crlNumber');
 
 const crlService = require('../src/services/crlService');
 
@@ -32,6 +34,7 @@ function buildTestCa() {
 describe('crlService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    crlNumberStore.nextCrlNumber.mockResolvedValue(1);
   });
 
   test('generatePemCrl produces a PEM encoded CRL with active entries', async() => {
@@ -45,6 +48,7 @@ describe('crlService', () => {
     revocation.getActiveRevoked.mockResolvedValue([
       { serialNumber: '10', revokedAt: '2024-01-01T00:00:00Z', reason: 'keyCompromise' },
     ]);
+    crlNumberStore.nextCrlNumber.mockResolvedValue(42);
 
     const pemCrl = await crlService.generatePemCrl('secret');
 
@@ -56,6 +60,15 @@ describe('crlService', () => {
     const entry = revokedSequence.value[0];
     const serialHex = forge.util.bytesToHex(entry.value[0].value);
     expect(serialHex).toBe(BigInt(10).toString(16).padStart(2, '0'));
+    const extensionsWrapper = tbs.value[tbs.value.length - 1];
+    const extensions = extensionsWrapper.value[0];
+    const crlNumberExtension = extensions.value.find(
+      (ext) => forge.asn1.derToOid(ext.value[0].value) === '2.5.29.20',
+    );
+    const crlNumber = forge.asn1.fromDer(crlNumberExtension.value[1].value);
+    const crlNumberHex = forge.util.bytesToHex(crlNumber.value);
+    expect(parseInt(crlNumberHex, 16)).toBe(42);
+    expect(crlNumberStore.nextCrlNumber).toHaveBeenCalled();
     expect(caStub.unlockCA).toHaveBeenCalled();
   });
 

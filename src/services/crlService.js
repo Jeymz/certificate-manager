@@ -1,6 +1,7 @@
 const forge = require('node-forge');
 const revocation = require('../resources/revocation');
 const CA = require('../resources/ca');
+const crlNumberStore = require('../resources/crlNumber');
 const config = require('../resources/config')();
 const logger = require('../utils/logger');
 
@@ -124,10 +125,9 @@ function buildCrlNumberExtension(crlNumber) {
   ]);
 }
 
-async function buildTbsList(issuer, revokedEntries) {
+async function buildTbsList(issuer, revokedEntries, crlNumber) {
   const now = new Date();
   const nextUpdate = new Date(now.getTime() + 3600 * 1000);
-  const crlNumber = now.getTime() % 0xFFFFFFFF;
   const revoked = buildRevokedEntries(revokedEntries);
   const children = [
     forge.asn1.create(forge.asn1.Class.UNIVERSAL, forge.asn1.Type.INTEGER, false, '\u0001'),
@@ -183,6 +183,7 @@ module.exports = {
       throw new Error('CA passphrase required for CRL generation');
     }
     const activeRevocations = await revocation.getActiveRevoked();
+    const crlNumber = await crlNumberStore.nextCrlNumber();
     const ca = await new CA(config.getDefaultIntermediate());
     ca.unlockCA(passphrase, 'CRL_GENERATION');
     const caKey = ca.getPrivateKey();
@@ -191,7 +192,7 @@ module.exports = {
     }
     const caCertificate = forge.pki.certificateFromPem(ca.getCACertificate());
     const issuer = forge.pki.distinguishedNameToAsn1(caCertificate.subject);
-    const tbsList = await buildTbsList(issuer, activeRevocations);
+    const tbsList = await buildTbsList(issuer, activeRevocations, crlNumber);
     const crlAsn1 = await signCrl(tbsList, caKey);
     const der = forge.asn1.toDer(crlAsn1).getBytes();
     const pem = forge.pem.encode({ type: 'X509 CRL', body: der });

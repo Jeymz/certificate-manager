@@ -2,4 +2,5 @@
 coverage
 config/*
 !config/defaults.example.json
+!config/defaults.json
 node_modules
