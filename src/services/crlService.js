@@ -178,10 +178,12 @@ module.exports = {
    *
    * @returns {Promise<string>} PEM formatted CRL.
    */
-  async generatePemCrl() {
+  async generatePemCrl(passphrase) {
+    if (typeof passphrase !== 'string' || passphrase.length === 0) {
+      throw new Error('CA passphrase required for CRL generation');
+    }
     const activeRevocations = await revocation.getActiveRevoked();
     const ca = await new CA(config.getDefaultIntermediate());
-    const passphrase = process.env.CA_PASSPHRASE || '';
     ca.unlockCA(passphrase, 'CRL_GENERATION');
     const caKey = ca.getPrivateKey();
     if (!caKey) {

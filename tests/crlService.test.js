@@ -46,7 +46,7 @@ describe('crlService', () => {
       { serialNumber: '10', revokedAt: '2024-01-01T00:00:00Z', reason: 'keyCompromise' },
     ]);
 
-    const pemCrl = await crlService.generatePemCrl();
+    const pemCrl = await crlService.generatePemCrl('secret');
 
     expect(pemCrl).toContain('BEGIN X509 CRL');
     const decoded = forge.pem.decode(pemCrl)[0];
@@ -69,7 +69,11 @@ describe('crlService', () => {
     CA.mockImplementation(() => Promise.resolve(caStub));
     revocation.getActiveRevoked.mockResolvedValue([]);
 
-    const pemCrl = await crlService.generatePemCrl();
+    const pemCrl = await crlService.generatePemCrl('secret');
     expect(pemCrl).toContain('BEGIN X509 CRL');
+  });
+
+  test('generatePemCrl rejects missing passphrase', async() => {
+    await expect(crlService.generatePemCrl()).rejects.toThrow('CA passphrase required for CRL generation');
   });
 });

@@ -72,7 +72,7 @@ module.exports = {
    *
    * @returns {Promise<string>} PEM encoded CRL.
    */
-  getCRLPem: async() => {
-    return await crlService.generatePemCrl();
+  getCRLPem: async(passphrase) => {
+    return await crlService.generatePemCrl(passphrase);
   },
 };

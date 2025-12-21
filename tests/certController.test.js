@@ -136,9 +136,9 @@ describe('certController', () => {
 
   test('getCRLPem returns PEM output', async() => {
     crlService.generatePemCrl.mockResolvedValue('PEM DATA');
-    const result = await controller.getCRLPem();
+    const result = await controller.getCRLPem('secret');
     expect(result).toBe('PEM DATA');
-    expect(crlService.generatePemCrl).toHaveBeenCalled();
+    expect(crlService.generatePemCrl).toHaveBeenCalledWith('secret');
   });
 
   test('newLdapServerCertificate sets LDAP cert type', async() => {

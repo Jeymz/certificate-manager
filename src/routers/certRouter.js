@@ -215,7 +215,12 @@ router.get('/crl', async(req, res) => {
 
 router.get('/crl.pem', async(req, res) => {
   try {
-    const crlPem = await controller.getCRLPem();
+    const passphrase = req.header('x-ca-passphrase');
+    if (typeof passphrase !== 'string' || passphrase.length === 0) {
+      logger.error('Missing CA passphrase for CRL generation');
+      return res.status(400).send({ error: 'CA passphrase required' });
+    }
+    const crlPem = await controller.getCRLPem(passphrase);
     res.set('Content-Type', 'application/pkix-crl');
     return res.status(200).send(crlPem);
   } catch (err) {
