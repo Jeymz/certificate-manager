@@ -132,6 +132,15 @@ module.exports = class CA {
   }
 
   /**
+   * Return the unlocked CA private key when available.
+   *
+   * @returns {forge.pki.rsa.PrivateKey|undefined} Decrypted private key.
+   */
+  getPrivateKey() {
+    return this.#private.caKey;
+  }
+
+  /**
    * Sign a certificate signing request.
    *
    * @param {import('./certificateRequest')} CSR - Certificate request instance.

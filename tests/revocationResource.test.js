@@ -47,6 +47,22 @@ describe('revocation resource', () => {
     expect(result).toEqual([]);
   });
 
+  test('getActiveRevoked filters expired certificates', async() => {
+    const now = new Date();
+    const expired = new Date(now.getTime() - 1000).toISOString();
+    const valid = new Date(now.getTime() + 10000).toISOString();
+    fs.promises.readFile.mockResolvedValueOnce(JSON.stringify({
+      certs: [
+        { serialNumber: '1', hostname: 'expired', expiration: expired, revoked: true },
+        { serialNumber: '2', hostname: 'valid', expiration: valid, revoked: true },
+      ],
+    }));
+    const result = await revocation.getActiveRevoked();
+    expect(result).toEqual([
+      { serialNumber: '2', hostname: 'valid', expiration: valid, revoked: true },
+    ]);
+  });
+
   test('revoke updates existing entry', async() => {
     fs.promises.readFile.mockResolvedValueOnce('{"certs":[{"serialNumber":"1","hostname":"host","expiration":"exp","revoked":false}]}');
     const result = await revocation.revoke('1', 'reason');

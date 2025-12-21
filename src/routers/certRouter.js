@@ -213,6 +213,17 @@ router.get('/crl', async(req, res) => {
   }
 });
 
+router.get('/crl.pem', async(req, res) => {
+  try {
+    const crlPem = await controller.getCRLPem();
+    res.set('Content-Type', 'application/pkix-crl');
+    return res.status(200).send(crlPem);
+  } catch (err) {
+    logger.error(`Error generating CRL: ${err.message}`);
+    return res.status(400).send({ error: 'Unable to process request' });
+  }
+});
+
 router.get('/', (req, res) => {
   if (config.isInitialized() === true) {
     return res.send('Ready');

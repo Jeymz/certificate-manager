@@ -75,6 +75,23 @@ class Revocation {
     const data = await this._load();
     return data.certs.filter((c) => c.revoked);
   }
+
+  /**
+   * Retrieve revoked certificates that have not yet expired.
+   *
+   * @returns {Promise<Array>} Revoked certificates still considered valid for CRL inclusion.
+   */
+  async getActiveRevoked() {
+    const now = new Date();
+    const data = await this._load();
+    return data.certs.filter((cert) => {
+      if (!cert.revoked) {
+        return false;
+      }
+      const expiration = new Date(cert.expiration);
+      return expiration.getTime() > now.getTime();
+    });
+  }
 }
 
 module.exports = new Revocation();

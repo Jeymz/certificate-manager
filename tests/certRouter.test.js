@@ -7,6 +7,7 @@ jest.mock('../src/controllers/certController', () => ({
   newIntermediateCA: jest.fn(),
   revokeCertificate: jest.fn(),
   getCRL: jest.fn(),
+  getCRLPem: jest.fn(),
 }));
 const controller = require('../src/controllers/certController');
 jest.mock('../src/utils/logger', () => ({ error: jest.fn(), info: jest.fn(), debug: jest.fn(), audit: { info: jest.fn() } }));
@@ -270,6 +271,21 @@ describe('certRouter', () => {
   test('get /crl handles errors', async() => {
     controller.getCRL.mockImplementation(() => { throw new Error('fail'); });
     const res = await request(app).get('/crl');
+    expect(res.status).toBe(400);
+    expect(logger.error).toHaveBeenCalled();
+  });
+
+  test('get /crl.pem returns PEM data', async() => {
+    controller.getCRLPem.mockResolvedValue('PEM DATA');
+    const res = await request(app).get('/crl.pem');
+    expect(res.status).toBe(200);
+    expect(res.text).toBe('PEM DATA');
+    expect(res.headers['content-type']).toContain('application/pkix-crl');
+  });
+
+  test('get /crl.pem handles errors', async() => {
+    controller.getCRLPem.mockImplementation(() => { throw new Error('fail'); });
+    const res = await request(app).get('/crl.pem');
     expect(res.status).toBe(400);
     expect(logger.error).toHaveBeenCalled();
   });

@@ -1,5 +1,6 @@
 const revocation = require('../resources/revocation');
 const certService = require('../services/certService');
+const crlService = require('../services/crlService');
 
 module.exports = {
   /**
@@ -62,7 +63,16 @@ module.exports = {
    * @returns {Promise<Object>} List of revoked certificates.
    */
   getCRL: async() => {
-    const revoked = await revocation.getRevoked();
+    const revoked = await revocation.getActiveRevoked();
     return { revoked };
+  },
+
+  /**
+   * Generate a PEM encoded CRL from active revocations.
+   *
+   * @returns {Promise<string>} PEM encoded CRL.
+   */
+  getCRLPem: async() => {
+    return await crlService.generatePemCrl();
   },
 };
