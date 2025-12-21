@@ -2,6 +2,7 @@
 jest.mock('../src/resources/certificateRequest');
 jest.mock('../src/resources/ca');
 jest.mock('../src/resources/revocation');
+jest.mock('../src/services/crlService');
 jest.mock('crypto', () => {
   const actual = jest.requireActual('crypto');
   return {
@@ -15,6 +16,7 @@ const CA = require('../src/resources/ca');
 const revocation = require('../src/resources/revocation');
 const controller = require('../src/controllers/certController');
 const config = require('../src/resources/config')();
+const crlService = require('../src/services/crlService');
 
 describe('certController', () => {
   beforeEach(() => {
@@ -43,6 +45,8 @@ describe('certController', () => {
     jest.spyOn(fs.promises, 'mkdir').mockResolvedValue();
     revocation.revoke.mockReset();
     revocation.getRevoked.mockReset();
+    revocation.getActiveRevoked.mockReset();
+    crlService.generatePemCrl.mockReset();
   });
 
   afterEach(() => {
@@ -125,9 +129,16 @@ describe('certController', () => {
   });
 
   test('getCRL returns revoked list', async() => {
-    revocation.getRevoked.mockResolvedValue([{ serialNumber: '1' }]);
+    revocation.getActiveRevoked.mockResolvedValue([{ serialNumber: '1' }]);
     const result = await controller.getCRL();
     expect(result).toEqual({ revoked: [{ serialNumber: '1' }] });
+  });
+
+  test('getCRLPem returns PEM output', async() => {
+    crlService.generatePemCrl.mockResolvedValue('PEM DATA');
+    const result = await controller.getCRLPem('secret');
+    expect(result).toBe('PEM DATA');
+    expect(crlService.generatePemCrl).toHaveBeenCalledWith('secret');
   });
 
   test('newLdapServerCertificate sets LDAP cert type', async() => {
