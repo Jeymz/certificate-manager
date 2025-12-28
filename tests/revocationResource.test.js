@@ -77,4 +77,16 @@ describe('revocation resource', () => {
     expect(result.revoked).toBe(true);
     expect(fs.promises.writeFile).not.toHaveBeenCalled();
   });
+
+  test('getBySerial returns matching entry', async() => {
+    const entry = { serialNumber: '42', hostname: 'host', expiration: 'exp', revoked: false };
+    fs.promises.readFile.mockResolvedValueOnce(JSON.stringify({ certs: [entry] }));
+    const result = await revocation.getBySerial('42');
+    expect(result).toEqual(entry);
+  });
+
+  test('getBySerial returns null when missing', async() => {
+    const result = await revocation.getBySerial('100');
+    expect(result).toBeNull();
+  });
 });

@@ -146,7 +146,21 @@ dependency. Installation differs slightly for each case.
    }
    ```
 
-7. Issued certificates are written to the directory specified by `storeDirectory`.
+7. Renew an existing certificate (re-issuing with the same subject and SANs) by posting to `http://localhost:{{SERVER.PORT}}/renew`:
+
+   ```json
+   {
+     "serialNumber": "1234",
+     "passphrase": "SecretPassphrase",
+     "validityDays": 90,
+     "bundleP12": true,
+     "password": "optional-bundle-password"
+   }
+   ```
+
+   The server will reuse the stored subject and SANs, apply the requested validity when allowed by policy limits, and return updated certificate material (optionally including a PKCS#12 bundle).
+
+8. Issued certificates are written to the directory specified by `storeDirectory`.
 
    - Leaf certificates: `newCerts/`
    - Private keys: `private/`
@@ -155,7 +169,7 @@ dependency. Installation differs slightly for each case.
    If `"bundleP12": true` is included in the request body, a PKCS#12 bundle is also
    written to `newCerts/<hostname>.bundle.p12`.
 
-8. (Optional) Create an intermediate CA by posting to
+9. (Optional) Create an intermediate CA by posting to
    `http://localhost:{{SERVER.PORT}}/intermediate` or running:
 
    ```cmd

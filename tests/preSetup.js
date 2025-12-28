@@ -9,3 +9,7 @@ if (!fs.existsSync(dest)) {
   contents.storeDirectory = './files_test';
   fs.writeFileSync(dest, `${JSON.stringify(contents, null, 2)}\n`);
 }
+const store = path.join(__dirname, '../files_test');
+if (!fs.existsSync(store)) {
+  fs.mkdirSync(store, { recursive: true });
+}
