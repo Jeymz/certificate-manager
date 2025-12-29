@@ -17,6 +17,7 @@ const revocation = require('../src/resources/revocation');
 const controller = require('../src/controllers/certController');
 const config = require('../src/resources/config')();
 const crlService = require('../src/services/crlService');
+const service = require('../src/services/certService');
 
 describe('certController', () => {
   beforeEach(() => {
@@ -147,5 +148,13 @@ describe('certController', () => {
     const reqInstance = CertificateRequest.mock.results[0].value;
     expect(reqInstance.setCertType).toHaveBeenCalledWith('ldapServer');
     expect(reqInstance.addAltNames).toHaveBeenCalledWith(['alt.example.com']);
+  });
+
+  test('renewCertificate forwards to service', async() => {
+    const spy = jest.spyOn(service, 'renewCertificate').mockResolvedValue({ renewed: true });
+    const result = await controller.renewCertificate('1', 'pass', true, 'bundle', 15, 'actor');
+    expect(result).toEqual({ renewed: true });
+    expect(spy).toHaveBeenCalledWith('1', 'pass', true, 'bundle', 15, 'actor');
+    spy.mockRestore();
   });
 });

@@ -92,6 +92,17 @@ class Revocation {
       return expiration.getTime() > now.getTime();
     });
   }
+
+  /**
+   * Retrieve a certificate entry by serial number.
+   *
+   * @param {string|number} serialNumber - Serial to locate.
+   * @returns {Promise<Object|null>} Matching certificate record or null.
+   */
+  async getBySerial(serialNumber) {
+    const data = await this._load();
+    return data.certs.find((c) => c.serialNumber === serialNumber.toString()) || null;
+  }
 }
 
 module.exports = new Revocation();

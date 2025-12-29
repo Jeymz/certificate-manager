@@ -83,6 +83,60 @@ router.post('/new', async(req, res) => {
   }
 });
 
+router.post('/renew', async(req, res) => {
+  try {
+    if (!req.body || typeof req.body !== 'object' || Object.keys(req.body).length === 0) {
+      logger.error('Invalid request body: must be an object');
+      return res.status(400).send({
+        error: 'Invalid request body',
+      });
+    }
+    const validator = config.getValidator();
+    if (!validator.validateSchema('renew', req.body)) {
+      logger.error('Invalid request body: schema validation failed');
+      return res.status(400).send({
+        error: 'Invalid request body: schema validation failed',
+      });
+    }
+    const {
+      serialNumber,
+      passphrase,
+      bundleP12,
+      password,
+      validityDays,
+    } = req.body;
+
+    const limitsRenew = (config.getValidityLimits && config.getValidityLimits()) || { minDays: 1, maxDays: 397 };
+    let finalValidityRenew = null;
+    if (typeof validityDays !== 'undefined' && validityDays !== null) {
+      if (validityDays < limitsRenew.minDays || validityDays > limitsRenew.maxDays) {
+        logger.error(`Requested validityDays ${validityDays} out of allowed range`);
+        return res.status(400).send({ error: `validityDays must be between ${limitsRenew.minDays} and ${limitsRenew.maxDays}` });
+      }
+      finalValidityRenew = validityDays;
+    }
+
+    const renewed = await controller.renewCertificate(
+      serialNumber,
+      passphrase,
+      bundleP12,
+      password,
+      finalValidityRenew,
+      req.ip,
+    );
+    if (renewed?.error) {
+      const status = renewed.error === 'Serial not found' || renewed.error === 'Certificate is revoked'
+        ? 404
+        : 400;
+      return res.status(status).json(renewed);
+    }
+    return res.status(200).json(renewed);
+  } catch (err) {
+    logger.error(`Error renewing certificate: ${err.message}`);
+    return res.status(400).send({ error: 'Unable to process request' });
+  }
+});
+
 router.post('/ldap', async(req, res) => {
   try {
     if (!req.body || typeof req.body !== 'object' || Object.keys(req.body).length === 0) {

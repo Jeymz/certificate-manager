@@ -119,4 +119,35 @@ module.exports = {
     },
     required: ['serialNumber'],
   },
+  renew: {
+    id: '/renew',
+    type: 'object',
+    additionalProperties: false,
+    properties: {
+      serialNumber: {
+        type: 'string',
+        pattern: /^\d+$/,
+      },
+      passphrase: {
+        type: 'string',
+        minLength: 1,
+      },
+      validityDays: {
+        type: 'integer',
+        minimum: 1,
+      },
+      bundleP12: {
+        type: 'boolean',
+      },
+      password: {
+        type: 'string',
+        minLength: 4,
+        maxLength: 128,
+      },
+    },
+    required: [
+      'serialNumber',
+      'passphrase',
+    ],
+  },
 };

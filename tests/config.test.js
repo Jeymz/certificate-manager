@@ -72,7 +72,7 @@ describe('config resource', () => {
   test('getProfileValidity returns configured profile metadata or null', () => {
     const fs = require('fs');
     // Load the defaults.json and modify a copy to include profileMetadata
-    const defaultsPath = require('path').join(__dirname, '..', 'config', 'defaults.json');
+    const defaultsPath = require('path').join(__dirname, '..', 'config', 'defaults.example.json');
     const original = fs.readFileSync(defaultsPath, 'utf8');
     const parsed = JSON.parse(original);
     parsed.profileMetadata = { webServer: { validityDays: 90 } };

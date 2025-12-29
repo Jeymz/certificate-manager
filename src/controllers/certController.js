@@ -32,6 +32,17 @@ module.exports = {
   },
 
   /**
+   * Renew an existing certificate using its serial number.
+   *
+   * @param {string} serialNumber - Serial number of the certificate to renew.
+   * @param {string} passphrase - Passphrase to unlock the CA key.
+   * @returns {Promise<Object>} Resolves with renewed certificate material.
+   */
+  renewCertificate: async(serialNumber, passphrase, bundleP12 = false, password = null, validityDays = null, performedBy = undefined) => {
+    return await certService.renewCertificate(serialNumber, passphrase, bundleP12, password, validityDays, performedBy);
+  },
+
+  /**
    * Generate and sign a new intermediate CA certificate.
    *
    * @param {string} hostname - Name for the intermediate CA.

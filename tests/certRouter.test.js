@@ -4,6 +4,7 @@ const express = require('express');
 jest.mock('../src/controllers/certController', () => ({
   newWebServerCertificate: jest.fn(),
   newLdapServerCertificate: jest.fn(),
+  renewCertificate: jest.fn(),
   newIntermediateCA: jest.fn(),
   revokeCertificate: jest.fn(),
   getCRL: jest.fn(),
@@ -109,6 +110,55 @@ describe('certRouter', () => {
     const res = await request(app).post('/new').send({ hostname: 'foo.example.com', passphrase: 'p' });
     expect(res.status).toBe(500);
     expect(res.body).toEqual({ error: 'Invalid server configuration for profile validity' });
+  });
+
+  test('post /renew forwards to controller', async() => {
+    controller.renewCertificate.mockResolvedValue({ renewed: true });
+    const res = await request(app).post('/renew').send({ serialNumber: '1', passphrase: 'p', bundleP12: true, password: 'pass', validityDays: 20 });
+    expect(res.body).toEqual({ renewed: true });
+    expect(controller.renewCertificate).toHaveBeenCalledWith('1', 'p', true, 'pass', 20, expect.any(String));
+  });
+
+  test('post /renew rejects missing body', async() => {
+    const res = await request(app).post('/renew');
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid request body' });
+  });
+
+  test('post /renew rejects invalid body', async() => {
+    mockConfig.getValidator.mockReturnValueOnce({ validateSchema: jest.fn(() => false) });
+    const res = await request(app).post('/renew').send({ invalid: true });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'Invalid request body: schema validation failed' });
+  });
+
+  test('post /renew rejects non-object body', async() => {
+    const res = await request(app)
+      .post('/renew')
+      .set('Content-Type', 'application/json')
+      .send('"bad"');
+    expect(res.status).toBe(400);
+  });
+
+  test('post /renew rejects validityDays out of allowed range', async() => {
+    mockConfig.getValidityLimits.mockReturnValueOnce({ minDays: 10, maxDays: 20 });
+    const res = await request(app).post('/renew').send({ serialNumber: '1', passphrase: 'p', validityDays: 30 });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({ error: 'validityDays must be between 10 and 20' });
+  });
+
+  test('post /renew returns 404 when controller reports missing serial', async() => {
+    controller.renewCertificate.mockResolvedValue({ error: 'Serial not found' });
+    const res = await request(app).post('/renew').send({ serialNumber: '9', passphrase: 'p' });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Serial not found' });
+  });
+
+  test('post /renew returns 404 when controller reports revoked certificate', async() => {
+    controller.renewCertificate.mockResolvedValue({ error: 'Certificate is revoked' });
+    const res = await request(app).post('/renew').send({ serialNumber: '9', passphrase: 'p' });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Certificate is revoked' });
   });
 
   test('invalid passphrase handled gracefully', async() => {
