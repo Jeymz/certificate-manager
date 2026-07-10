@@ -38,6 +38,19 @@
   ],
   "requireIntermediate": true,
   "defaultIntermediate": "intermediateCA.example.com",
+  "revocationPublishing": {
+    "enabled": true,
+    "issuers": {
+      "root": {
+        "publicUrl": "http://pki.example.com/crl/root-ca.crl.pem",
+        "relativePath": "crl/root-ca.crl.pem"
+      },
+      "defaultIntermediate": {
+        "publicUrl": "http://pki.example.com/crl/intermediateCA.example.com.crl.pem",
+        "relativePath": "crl/intermediateCA.example.com.crl.pem"
+      }
+    }
+  },
   "extensions": {
     "CA": [
       {
@@ -50,7 +63,17 @@
         "nonRepudiation": true,
         "keyEncipherment": true,
         "dataEncipherment": true,
-        "keyCertSign": true
+        "keyCertSign": true,
+        "cRLSign": true
+      },
+      {
+        "name": "cRLDistributionPoints",
+        "altNames": [
+          {
+            "type": 6,
+            "value": "http://pki.example.com/crl/root-ca.crl.pem"
+          }
+        ]
       },
       { "name": "subjectKeyIdentifier" },
       { "name": "authorityKeyIdentifier" }
@@ -70,6 +93,15 @@
         "name": "extKeyUsage",
         "serverAuth": true
       },
+      {
+        "name": "cRLDistributionPoints",
+        "altNames": [
+          {
+            "type": 6,
+            "value": "http://pki.example.com/crl/intermediateCA.example.com.crl.pem"
+          }
+        ]
+      },
       { "name": "subjectKeyIdentifier" },
       { "name": "authorityKeyIdentifier" }
     ],
@@ -88,6 +120,15 @@
         "serverAuth": true,
         "clientAuth": true
       },
+      {
+        "name": "cRLDistributionPoints",
+        "altNames": [
+          {
+            "type": 6,
+            "value": "http://pki.example.com/crl/intermediateCA.example.com.crl.pem"
+          }
+        ]
+      },
       { "name": "subjectKeyIdentifier" },
       { "name": "authorityKeyIdentifier" }
     ],
@@ -102,6 +143,15 @@
         "digitalSignature": true,
         "keyCertSign": true,
         "cRLSign": true
+      },
+      {
+        "name": "cRLDistributionPoints",
+        "altNames": [
+          {
+            "type": 6,
+            "value": "http://pki.example.com/crl/root-ca.crl.pem"
+          }
+        ]
       },
       { "name": "subjectKeyIdentifier" },
       { "name": "authorityKeyIdentifier" }

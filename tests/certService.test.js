@@ -21,10 +21,10 @@ jest.mock('crypto', () => {
 });
 
 const path = require('path');
+const forge = require('node-forge');
 const CertificateRequest = require('../src/resources/certificateRequest');
 const CA = require('../src/resources/ca');
 const revocation = require('../src/resources/revocation');
-const forge = require('node-forge');
 const service = require('../src/services/certService');
 
 describe('certService', () => {

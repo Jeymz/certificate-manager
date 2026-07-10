@@ -48,6 +48,8 @@ describe('certController', () => {
     revocation.getRevoked.mockReset();
     revocation.getActiveRevoked.mockReset();
     crlService.generatePemCrl.mockReset();
+    crlService.publishPemCrl.mockReset();
+    crlService.getPublishedPemCrl.mockReset();
   });
 
   afterEach(() => {
@@ -118,9 +120,11 @@ describe('certController', () => {
 
   test('revokeCertificate returns success', async() => {
     revocation.revoke.mockResolvedValue({});
-    const result = await controller.revokeCertificate('1', 'KeyCompromise');
+    crlService.publishPemCrl.mockResolvedValue('files_test/crl/root-ca.crl.pem');
+    const result = await controller.revokeCertificate('1', 'KeyCompromise', 'secret');
     expect(result).toEqual({ revoked: true });
     expect(revocation.revoke).toHaveBeenCalledWith('1', 'KeyCompromise', undefined);
+    expect(crlService.publishPemCrl).toHaveBeenCalledWith('secret');
   });
 
   test('revokeCertificate handles missing serial', async() => {
@@ -136,10 +140,10 @@ describe('certController', () => {
   });
 
   test('getCRLPem returns PEM output', async() => {
-    crlService.generatePemCrl.mockResolvedValue('PEM DATA');
-    const result = await controller.getCRLPem('secret');
+    crlService.getPublishedPemCrl.mockResolvedValue('PEM DATA');
+    const result = await controller.getCRLPem();
     expect(result).toBe('PEM DATA');
-    expect(crlService.generatePemCrl).toHaveBeenCalledWith('secret');
+    expect(crlService.getPublishedPemCrl).toHaveBeenCalled();
   });
 
   test('newLdapServerCertificate sets LDAP cert type', async() => {

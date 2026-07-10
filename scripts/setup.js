@@ -3,6 +3,7 @@ const crypto = require('crypto');
 const path = require('path');
 const forge = require('node-forge');
 const config = require('../src/resources/config')();
+const crlService = require('../src/services/crlService');
 const logger = require('../src/utils/logger');
 
 const CA_VALIDITY_YEARS = process.env.CA_VALIDITY_YEARS || 5;
@@ -58,6 +59,11 @@ async function createCA() {
     name: 'basicConstraints',
     cA: true,
   }, {
+    name: 'keyUsage',
+    digitalSignature: true,
+    keyCertSign: true,
+    cRLSign: true,
+  }, {
     name: 'subjectKeyIdentifier',
   }, {
     name: 'authorityKeyIdentifier',
@@ -93,6 +99,7 @@ async function createCA() {
   await ensureDir(path.join(config.getStoreDirectory(), 'certs'));
   await ensureDir(path.join(config.getStoreDirectory(), 'requests'));
   await ensureDir(path.join(config.getStoreDirectory(), 'newCerts'));
+  await ensureDir(path.join(config.getStoreDirectory(), 'crl'));
 
   await fs.writeFile(path.join(config.getStoreDirectory(), 'private', 'ca.key.pem'), keypair.privateKey, { encoding: 'utf-8' });
   await fs.writeFile(path.join(config.getStoreDirectory(), 'public', 'ca.pubkey.pem'), keypair.publicKey, { encoding: 'utf-8' });
@@ -104,6 +111,7 @@ async function createCA() {
     certs: [],
   }), { encoding: 'utf-8' });
   await fs.writeFile(path.join(config.getStoreDirectory(), 'serial'), '1000000', { encoding: 'utf-8' });
+  await crlService.publishPemCrl(process.env.CAPASS.toString().trim(), null);
   logger.info('CA created successfully.');
   logger.audit.info({
     timestamp: new Date().toISOString(),

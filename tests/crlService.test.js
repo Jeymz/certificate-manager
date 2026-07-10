@@ -3,14 +3,32 @@ jest.mock('../src/resources/revocation');
 jest.mock('../src/resources/config', () => () => ({
   getDefaultIntermediate: jest.fn(() => null),
   getStoreDirectory: jest.fn(() => './files_test'),
+  getActiveRevocationIssuerKey: jest.fn(() => 'root'),
+  getRevocationIssuerConfig: jest.fn((issuerKey) => {
+    if (issuerKey === 'root') {
+      return { publicUrl: 'http://pki.example.com/crl/root-ca.crl.pem', relativePath: 'crl/root-ca.crl.pem' };
+    }
+    if (issuerKey === 'defaultIntermediate') {
+      return { publicUrl: 'http://pki.example.com/crl/intermediateCA.example.com.crl.pem', relativePath: 'crl/intermediateCA.example.com.crl.pem' };
+    }
+    return null;
+  }),
 }));
 jest.mock('../src/resources/crlNumber');
+jest.mock('fs', () => ({
+  promises: {
+    mkdir: jest.fn(),
+    writeFile: jest.fn(),
+    readFile: jest.fn(),
+  },
+}));
 jest.mock('../src/utils/logger', () => ({
   debug: jest.fn(),
   info: jest.fn(),
 }));
 
 const forge = require('node-forge');
+const fs = require('fs').promises;
 const CA = require('../src/resources/ca');
 const revocation = require('../src/resources/revocation');
 const crlNumberStore = require('../src/resources/crlNumber');
@@ -18,6 +36,7 @@ const crlNumberStore = require('../src/resources/crlNumber');
 const crlService = require('../src/services/crlService');
 
 function buildTestCa() {
+  // deepcode ignore TooSmallRsaKeySizeUsed/test: 1024 is sufficient for test purposes
   const keypair = forge.pki.rsa.generateKeyPair({ bits: 1024, e: 0x10001 });
   const cert = forge.pki.createCertificate();
   cert.publicKey = keypair.publicKey;
@@ -35,6 +54,8 @@ describe('crlService', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     crlNumberStore.nextCrlNumber.mockResolvedValue(1);
+    fs.mkdir.mockResolvedValue();
+    fs.writeFile.mockResolvedValue();
   });
 
   test('generatePemCrl produces a PEM encoded CRL with active entries', async() => {
@@ -88,5 +109,40 @@ describe('crlService', () => {
 
   test('generatePemCrl rejects missing passphrase', async() => {
     await expect(crlService.generatePemCrl()).rejects.toThrow('CA passphrase required for CRL generation');
+  });
+
+  test('publishPemCrl writes CRL artifact to configured path', async() => {
+    const { keypair, pem } = buildTestCa();
+    const caStub = {
+      unlockCA: jest.fn(),
+      getPrivateKey: jest.fn(() => keypair.privateKey),
+      getCACertificate: jest.fn(() => pem),
+    };
+    CA.mockImplementation(() => Promise.resolve(caStub));
+    revocation.getActiveRevoked.mockResolvedValue([]);
+
+    const outputPath = await crlService.publishPemCrl('secret');
+
+    expect(outputPath).toContain('crl');
+    expect(fs.mkdir).toHaveBeenCalled();
+    expect(fs.writeFile).toHaveBeenCalledWith(
+      expect.stringContaining('root-ca.crl.pem'),
+      expect.stringContaining('BEGIN X509 CRL'),
+      { encoding: 'utf-8' },
+    );
+  });
+
+  test('getPublishedPemCrl reads published artifact', async() => {
+    fs.readFile.mockResolvedValue('PEM DATA');
+    const result = await crlService.getPublishedPemCrl();
+    expect(result).toBe('PEM DATA');
+    expect(fs.readFile).toHaveBeenCalledWith(expect.stringContaining('root-ca.crl.pem'), 'utf-8');
+  });
+
+  test('getPublishedPemCrl maps missing artifact to ENOENT', async() => {
+    const err = new Error('missing');
+    err.code = 'ENOENT';
+    fs.readFile.mockRejectedValue(err);
+    await expect(crlService.getPublishedPemCrl()).rejects.toMatchObject({ code: 'ENOENT' });
   });
 });

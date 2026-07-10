@@ -1,7 +1,6 @@
 import js from '@eslint/js';
 import globals from 'globals';
 import json from '@eslint/json';
-import markdown from '@eslint/markdown';
 import { defineConfig, globalIgnores } from 'eslint/config';
 import importPlugin from 'eslint-plugin-import';
 import jest from 'eslint-plugin-jest';
@@ -60,5 +59,4 @@ export default defineConfig([
     },
   },
   { files: ['**/*.json'], plugins: { json }, language: 'json/json', extends: [json.configs.recommended] },
-  { files: ['**/*.md'], plugins: { markdown }, language: 'markdown/commonmark', extends: [markdown.configs.recommended] },
 ]);

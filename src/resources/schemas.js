@@ -116,8 +116,12 @@ module.exports = {
       reason: {
         type: 'string',
       },
+      passphrase: {
+        type: 'string',
+        minLength: 1,
+      },
     },
-    required: ['serialNumber'],
+    required: ['serialNumber', 'passphrase'],
   },
   renew: {
     id: '/renew',

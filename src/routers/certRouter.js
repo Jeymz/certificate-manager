@@ -7,7 +7,27 @@ const logger = require('../utils/logger');
  * Express router exposing certificate issuance endpoints.
  */
 const router = express.Router();
+const activeRevocationIssuerConfig = config.getActiveRevocationIssuerConfig
+  ? config.getActiveRevocationIssuerConfig()
+  : null;
+const publishedCrlRoute = activeRevocationIssuerConfig?.relativePath
+  ? `/${activeRevocationIssuerConfig.relativePath.replace(/^\/+/, '')}`
+  : null;
 
+async function sendPublishedCrl(req, res) {
+  try {
+    const crlPem = await controller.getCRLPem();
+    res.set('Content-Type', 'application/pkix-crl');
+    return res.status(200).send(crlPem);
+  } catch (err) {
+    if (err.code === 'ENOENT') {
+      logger.error(`Published CRL not found: ${err.message}`);
+      return res.status(404).send({ error: 'Published CRL not found' });
+    }
+    logger.error(`Error generating CRL: ${err.message}`);
+    return res.status(400).send({ error: 'Unable to process request' });
+  }
+}
 
 
 router.post('/new', async(req, res) => {
@@ -116,6 +136,7 @@ router.post('/renew', async(req, res) => {
       finalValidityRenew = validityDays;
     }
 
+    // deepcode ignore PT: All request body parameters are validated by the schema on line 95
     const renewed = await controller.renewCertificate(
       serialNumber,
       passphrase,
@@ -245,8 +266,8 @@ router.post('/revoke', async(req, res) => {
       logger.error('Invalid request body: schema validation failed');
       return res.status(400).send({ error: 'Invalid request body: schema validation failed' });
     }
-    const { serialNumber, reason } = req.body;
-    const result = await controller.revokeCertificate(serialNumber, reason, req.ip);
+    const { serialNumber, reason, passphrase } = req.body;
+    const result = await controller.revokeCertificate(serialNumber, reason, passphrase, req.ip);
     if (result.error) {
       return res.status(404).send(result);
     }
@@ -268,20 +289,14 @@ router.get('/crl', async(req, res) => {
 });
 
 router.get('/crl.pem', async(req, res) => {
-  try {
-    const passphrase = req.header('x-ca-passphrase');
-    if (typeof passphrase !== 'string' || passphrase.length === 0) {
-      logger.error('Missing CA passphrase for CRL generation');
-      return res.status(400).send({ error: 'CA passphrase required' });
-    }
-    const crlPem = await controller.getCRLPem(passphrase);
-    res.set('Content-Type', 'application/pkix-crl');
-    return res.status(200).send(crlPem);
-  } catch (err) {
-    logger.error(`Error generating CRL: ${err.message}`);
-    return res.status(400).send({ error: 'Unable to process request' });
-  }
+  return sendPublishedCrl(req, res);
 });
+
+if (publishedCrlRoute && publishedCrlRoute !== '/crl.pem') {
+  router.get(publishedCrlRoute, async(req, res) => {
+    return sendPublishedCrl(req, res);
+  });
+}
 
 router.get('/', (req, res) => {
   if (config.isInitialized() === true) {

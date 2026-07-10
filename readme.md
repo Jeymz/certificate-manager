@@ -20,6 +20,7 @@ dependency. Installation differs slightly for each case.
   - `AUDIT_LOG_FILE` - path to the audit log file
 - Install runtime dependencies with `npm install --production`
 - Run `npm run setup` to generate the root CA
+- Run `npm run publish-crl` to backfill or refresh the published CRL for an existing store
 - Start the server with `npm start`
 
 ### For Contributors
@@ -78,6 +79,20 @@ dependency. Installation differs slightly for each case.
 
      "requireIntermediate": true,
      "defaultIntermediate": "intermediate",
+
+     "revocationPublishing": {
+       "enabled": true,
+       "issuers": {
+         "root": {
+           "publicUrl": "http://pki.example.com/crl/root-ca.crl.pem",
+           "relativePath": "crl/root-ca.crl.pem"
+         },
+         "defaultIntermediate": {
+           "publicUrl": "http://pki.example.com/crl/intermediate.crl.pem",
+           "relativePath": "crl/intermediate.crl.pem"
+         }
+       }
+     },
 
      "validityLimits": {
        "minDays": 1,
@@ -173,12 +188,47 @@ dependency. Installation differs slightly for each case.
    `http://localhost:{{SERVER.PORT}}/intermediate` or running:
 
    ```cmd
-   CAPASS=SecretPassphrase node scripts/setup-intermediate.js intermediate-name
+   CAPASS=SecretPassphrase INTPASS=IntermediateSecret node scripts/setup-intermediate.js intermediate-name
    ```
 
    When `requireIntermediate` is `true`, the application refuses to issue leaf
    certificates directly from the root key. Issued certificates include a
    `.chain.crt` file containing both the leaf and intermediate certificates.
+
+10. Revoke a certificate by posting to `http://localhost:{{SERVER.PORT}}/revoke`:
+
+   ```json
+   {
+     "serialNumber": "1234",
+     "reason": "keyCompromise",
+     "passphrase": "SecretPassphrase"
+   }
+   ```
+
+   The revoke request now requires the CA passphrase so the service can publish
+   an updated signed CRL immediately after the revocation is recorded.
+
+11. Retrieve the published CRL from `http://localhost:{{SERVER.PORT}}/crl.pem`.
+
+   The endpoint now serves a pre-generated static artifact and does not require
+   a request header or passphrase.
+
+12. For an existing initialized CA store, publish or refresh the CRL artifact manually:
+
+   Root-issued deployments:
+
+   ```cmd
+   SET CAPASS=SecretPassphrase && npm run publish-crl
+   ```
+
+   Default-intermediate deployments:
+
+   ```cmd
+   SET INTPASS=IntermediateSecret && npm run publish-crl
+   ```
+
+   You can override the target explicitly with `CRL_ISSUER=root` or
+   `CRL_ISSUER=defaultIntermediate` when needed.
 
 ## Certificate lifetime policy
 
@@ -189,6 +239,23 @@ and allows clients to request a specific lifetime when issuing certificates.
 CA and intermediate certificate lifetimes are controlled separately by setup
 scripts and environment configuration and are not affected by request-level
 settings.
+
+## Revocation publishing
+
+The application now supports CRL Distribution Point metadata for issued
+certificates and publishes signed CRL artifacts into the certificate store.
+
+- Root-issued deployments should embed the root issuer CRL URL in leaf certificates.
+- Intermediate-issued deployments should embed the default intermediate CRL URL in leaf certificates and the root CRL URL in the intermediate certificate.
+- Setup writes an initial empty CRL for the active issuer so clients do not have to wait for the first revoke event.
+- Revoke operations republish the signed CRL immediately.
+- Existing certificates must be reissued after enabling CRL distribution metadata. Old certificates will not gain CDP extensions retroactively.
+
+For Windows and Schannel-based clients:
+
+- Use a stable CRL URL reachable by the client, preferably over plain HTTP.
+- Make sure the published CRL artifact is actually available at the configured `publicUrl`.
+- Trust the root CA in the Windows certificate store before testing.
 
 ## Audit logging
 

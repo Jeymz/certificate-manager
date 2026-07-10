@@ -27,6 +27,7 @@ describe('profile validity enforcement', () => {
 
   beforeEach(() => {
     const router = require('../src/routers/certRouter');
+    // deepcode ignore DisablePoweredBy/test: Not relevant to test
     app = express();
     app.use(express.json());
     app.use('/', router);

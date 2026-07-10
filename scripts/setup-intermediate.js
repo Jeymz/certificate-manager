@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const CertificateRequest = require('../src/resources/certificateRequest');
 const CA = require('../src/resources/ca');
 const config = require('../src/resources/config')();
+const crlService = require('../src/services/crlService');
 const logger = require('../src/utils/logger');
 
 async function createIntermediate(name, passphrase, intermediatePassphrase) {
@@ -43,6 +44,9 @@ async function createIntermediate(name, passphrase, intermediatePassphrase) {
   await fs.mkdir(intDir, { recursive: true });
   await fs.writeFile(path.join(intDir, `${name}.cert.crt`), certificate, { encoding: 'utf-8' });
   await fs.writeFile(path.join(intDir, `${name}.key.pem`), privateKey, { encoding: 'utf-8' });
+  if (config.getDefaultIntermediate && config.getDefaultIntermediate() === name) {
+    await crlService.publishPemCrl(intermediatePassphrase, name);
+  }
   logger.info(`Intermediate CA '${name}' created.`);
   logger.audit.info({
     timestamp: new Date().toISOString(),

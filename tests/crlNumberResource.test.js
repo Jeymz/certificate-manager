@@ -14,7 +14,6 @@ const loadStore = async(storeDir) => {
   jest.resetModules();
   mockStoreDir = storeDir;
   createdDirs.push(storeDir);
-  // eslint-disable-next-line global-require
   return require('../src/resources/crlNumber');
 };
 

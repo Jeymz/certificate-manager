@@ -8,6 +8,9 @@ async function createStore(opts = {}) {
   if (!opts.skipIntermediates) {
     await fs.mkdir(path.join(dir, 'intermediates'), { recursive: true });
   }
+  if (!opts.skipCrl) {
+    await fs.mkdir(path.join(dir, 'crl'), { recursive: true });
+  }
   if (!opts.skipSerial) {
     await fs.writeFile(path.join(dir, 'serial'), '1');
   }
@@ -28,7 +31,15 @@ describe('validateStore utility', () => {
   test('creates all files when store empty', async() => {
     const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'store-'));
     const created = await validateStore(dir);
-    expect(created).toEqual(expect.arrayContaining(['serial', 'log.json', 'revoked.json', 'intermediates']));
+    expect(created).toEqual(expect.arrayContaining(['serial', 'log.json', 'revoked.json', 'intermediates', 'crl']));
+    await cleanup(dir);
+  });
+
+  test('creates missing crl directory', async() => {
+    const dir = await createStore({ skipCrl: true });
+    const created = await validateStore(dir);
+    expect(created).toContain('crl');
+    expect(created).toHaveLength(1);
     await cleanup(dir);
   });
 

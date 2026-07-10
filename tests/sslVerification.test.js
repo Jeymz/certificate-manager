@@ -17,7 +17,7 @@ beforeAll(async() => {
   createIntermediate = require('../scripts/setup-intermediate');
   controller = require('../src/controllers/certController');
   await createCA();
-  await createIntermediate('intermediateCA.example.com', 'pass');
+  await createIntermediate('intermediateCA.example.com', 'pass', 'intpass');
 });
 
 afterAll(async() => {
@@ -36,7 +36,7 @@ test('intermediate certificate validates with root CA', async() => {
 });
 
 test('web server certificate validates with root CA', async() => {
-  const { chain } = await controller.newWebServerCertificate('server.example.com', 'pass');
+  const { chain } = await controller.newWebServerCertificate('server.example.com', 'intpass');
   const rootPem = await fs.readFile(path.join(__dirname, '../files_test/certs/ca.cert.crt'), 'utf-8');
   const rootCert = forge.pki.certificateFromPem(rootPem);
   const chainCerts = chain.match(/-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----/g);
@@ -45,10 +45,12 @@ test('web server certificate validates with root CA', async() => {
   const caStore = forge.pki.createCaStore([rootCert]);
   const verified = forge.pki.verifyCertificateChain(caStore, [serverCert, intermediateCert]);
   expect(verified).toBe(true);
+  const crlDp = serverCert.extensions.find((e) => e.name === 'cRLDistributionPoints');
+  expect(crlDp).toBeDefined();
 });
 
 test('ldap server certificate includes required extensions', async() => {
-  const { certificate } = await controller.newLdapServerCertificate('ldap.example.com', 'pass', ['ldap.example.com']);
+  const { certificate } = await controller.newLdapServerCertificate('ldap.example.com', 'intpass', ['ldap.example.com']);
   const cert = forge.pki.certificateFromPem(certificate);
   const eku = cert.extensions.find(e => e.name === 'extKeyUsage');
   expect(eku.clientAuth).toBe(true);
@@ -56,4 +58,11 @@ test('ldap server certificate includes required extensions', async() => {
   const san = cert.extensions.find(e => e.name === 'subjectAltName');
   const dnsNames = san.altNames.filter(n => n.type === 2).map(n => n.value);
   expect(dnsNames).toContain('ldap.example.com');
+  const crlDp = cert.extensions.find((e) => e.name === 'cRLDistributionPoints');
+  expect(crlDp).toBeDefined();
+});
+
+test('setup publishes a CRL artifact for the active issuer', async() => {
+  const pem = await fs.readFile(path.join(__dirname, '../files_test/crl/intermediateCA.example.com.crl.pem'), 'utf-8');
+  expect(pem).toContain('BEGIN X509 CRL');
 });

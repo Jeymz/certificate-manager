@@ -3,3 +3,4 @@ coverage
 config/*
 !config/defaults.example.json
 node_modules
+.vscode

@@ -60,11 +60,12 @@ module.exports = {
    * @param {string} [reason] - Optional revocation reason.
    * @returns {Promise<Object>} Result of the revocation request.
    */
-  revokeCertificate: async(serialNumber, reason, performedBy = undefined) => {
+  revokeCertificate: async(serialNumber, reason, passphrase, performedBy = undefined) => {
     const result = await revocation.revoke(serialNumber.toString(), reason, performedBy);
     if (!result) {
       return { error: 'Serial not found' };
     }
+    await crlService.publishPemCrl(passphrase);
     return { revoked: true };
   },
   
@@ -83,7 +84,7 @@ module.exports = {
    *
    * @returns {Promise<string>} PEM encoded CRL.
    */
-  getCRLPem: async(passphrase) => {
-    return await crlService.generatePemCrl(passphrase);
+  getCRLPem: async() => {
+    return await crlService.getPublishedPemCrl();
   },
 };

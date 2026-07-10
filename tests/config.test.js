@@ -50,6 +50,17 @@ describe('config resource', () => {
     const extensions = config.getCertExtensions();
     expect(extensions).toHaveProperty('webServer');
     expect(extensions).toHaveProperty('ldapServer');
+    expect(extensions.webServer).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        name: 'cRLDistributionPoints',
+        altNames: [
+          expect.objectContaining({
+            type: 6,
+            value: 'http://pki.example.com/crl/intermediateCA.example.com.crl.pem',
+          }),
+        ],
+      }),
+    ]));
   });
 
   test('getDefaultIntermediate returns configured value', () => {
@@ -82,5 +93,32 @@ describe('config resource', () => {
     const fresh = freshFactory();
     expect(fresh.getProfileValidity('webServer')).toBe(90);
     fs.readFileSync.mockRestore();
+  });
+
+  test('getRevocationPublishing returns issuer publication settings', () => {
+    const config = configFactory();
+    expect(config.getRevocationPublishing()).toEqual({
+      enabled: true,
+      issuers: {
+        root: {
+          publicUrl: 'http://pki.example.com/crl/root-ca.crl.pem',
+          relativePath: 'crl/root-ca.crl.pem',
+        },
+        defaultIntermediate: {
+          publicUrl: 'http://pki.example.com/crl/intermediateCA.example.com.crl.pem',
+          relativePath: 'crl/intermediateCA.example.com.crl.pem',
+        },
+      },
+    });
+    expect(config.getRevocationIssuerConfig('defaultIntermediate')).toEqual({
+      publicUrl: 'http://pki.example.com/crl/intermediateCA.example.com.crl.pem',
+      relativePath: 'crl/intermediateCA.example.com.crl.pem',
+    });
+    expect(config.getActiveRevocationIssuerKey()).toBe('defaultIntermediate');
+    expect(config.getActiveRevocationIssuerConfig()).toEqual({
+      publicUrl: 'http://pki.example.com/crl/intermediateCA.example.com.crl.pem',
+      relativePath: 'crl/intermediateCA.example.com.crl.pem',
+    });
+    expect(config.getRevocationIssuerConfig('missing')).toBeNull();
   });
 });

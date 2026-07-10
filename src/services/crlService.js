@@ -1,3 +1,5 @@
+const fs = require('fs').promises;
+const path = require('path');
 const forge = require('node-forge');
 const revocation = require('../resources/revocation');
 const CA = require('../resources/ca');
@@ -172,19 +174,40 @@ async function signCrl(tbsCertList, caKey) {
   ]);
 }
 
+function getIssuerContext(intermediateOverride = undefined) {
+  const issuerKey = intermediateOverride === null
+    ? 'root'
+    : (typeof intermediateOverride === 'string' && intermediateOverride.length > 0
+      ? 'defaultIntermediate'
+      : config.getActiveRevocationIssuerKey());
+  const intermediateName = issuerKey === 'defaultIntermediate'
+    ? (typeof intermediateOverride === 'string' && intermediateOverride.length > 0
+      ? intermediateOverride
+      : config.getDefaultIntermediate())
+    : null;
+  const issuerConfig = config.getRevocationIssuerConfig(issuerKey);
+  if (!issuerConfig) {
+    const err = new Error(`Revocation publishing is not configured for issuer ${issuerKey}`);
+    err.code = 'CRL_CONFIG_MISSING';
+    throw err;
+  }
+  return { issuerKey, intermediateName, issuerConfig };
+}
+
 module.exports = {
   /**
    * Generate a PEM encoded certificate revocation list signed by the CA.
    *
    * @returns {Promise<string>} PEM formatted CRL.
    */
-  async generatePemCrl(passphrase) {
+  async generatePemCrl(passphrase, intermediateOverride = undefined) {
     if (typeof passphrase !== 'string' || passphrase.length === 0) {
       throw new Error('CA passphrase required for CRL generation');
     }
+    const { intermediateName } = getIssuerContext(intermediateOverride);
     const activeRevocations = await revocation.getActiveRevoked();
     const crlNumber = await crlNumberStore.nextCrlNumber();
-    const ca = await new CA(config.getDefaultIntermediate());
+    const ca = await new CA(intermediateName);
     ca.unlockCA(passphrase, 'CRL_GENERATION');
     const caKey = ca.getPrivateKey();
     if (!caKey) {
@@ -198,5 +221,43 @@ module.exports = {
     const pem = forge.pem.encode({ type: 'X509 CRL', body: der });
     logger.info('Generated CRL with active revocations', { count: activeRevocations.length });
     return pem;
+  },
+
+  /**
+   * Generate and persist the PEM encoded CRL for the active issuer.
+   *
+   * @param {string} passphrase - Passphrase to unlock the CRL-signing CA key.
+   * @param {string|undefined} [intermediateOverride] - Optional intermediate name to sign with.
+   * @returns {Promise<string>} Absolute path to the published CRL.
+   */
+  async publishPemCrl(passphrase, intermediateOverride = undefined) {
+    const { intermediateName, issuerConfig } = getIssuerContext(intermediateOverride);
+    const pem = await this.generatePemCrl(passphrase, intermediateName);
+    const outputPath = path.join(config.getStoreDirectory(), issuerConfig.relativePath);
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
+    await fs.writeFile(outputPath, pem, { encoding: 'utf-8' });
+    logger.info('Published CRL artifact', { outputPath });
+    return outputPath;
+  },
+
+  /**
+   * Read the published PEM encoded CRL for the active issuer.
+   *
+   * @param {string|undefined} [intermediateOverride] - Optional intermediate name to resolve against.
+   * @returns {Promise<string>} PEM formatted CRL.
+   */
+  async getPublishedPemCrl(intermediateOverride = undefined) {
+    const { issuerConfig } = getIssuerContext(intermediateOverride);
+    const outputPath = path.join(config.getStoreDirectory(), issuerConfig.relativePath);
+    try {
+      return await fs.readFile(outputPath, 'utf-8');
+    } catch (err) {
+      if (err.code === 'ENOENT') {
+        const notFound = new Error('Published CRL not found');
+        notFound.code = 'ENOENT';
+        throw notFound;
+      }
+      throw err;
+    }
   },
 };

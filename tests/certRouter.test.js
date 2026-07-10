@@ -23,6 +23,7 @@ var mockConfig = {
   getStoreDirectory: jest.fn(() => './files_test'),
   getValidityLimits: jest.fn(() => ({ minDays: 1, maxDays: 397 })),
   getProfileValidity: jest.fn(() => null),
+  getActiveRevocationIssuerConfig: jest.fn(() => ({ relativePath: 'crl/root-ca.crl.pem' })),
 };
 jest.mock('../src/resources/config', () => jest.fn(() => mockConfig));
 
@@ -272,9 +273,9 @@ describe('certRouter', () => {
     controller.revokeCertificate.mockResolvedValue({ revoked: true });
     const res = await request(app)
       .post('/revoke')
-      .send({ serialNumber: '1', reason: 'KeyCompromise' });
+      .send({ serialNumber: '1', reason: 'KeyCompromise', passphrase: 'secret' });
     expect(res.body).toEqual({ revoked: true });
-    expect(controller.revokeCertificate).toHaveBeenCalledWith('1', 'KeyCompromise', expect.any(String));
+    expect(controller.revokeCertificate).toHaveBeenCalledWith('1', 'KeyCompromise', 'secret', expect.any(String));
   });
 
   test('post /revoke rejects non-object body', async() => {
@@ -299,7 +300,7 @@ describe('certRouter', () => {
 
   test('post /revoke handles controller error', async() => {
     controller.revokeCertificate.mockImplementation(() => { throw new Error('fail'); });
-    const res = await request(app).post('/revoke').send({ serialNumber: '1' });
+    const res = await request(app).post('/revoke').send({ serialNumber: '1', passphrase: 'secret' });
     expect(res.status).toBe(400);
     expect(logger.error).toHaveBeenCalled();
   });
@@ -308,7 +309,7 @@ describe('certRouter', () => {
     controller.revokeCertificate.mockResolvedValue({ error: 'Serial not found' });
     const res = await request(app)
       .post('/revoke')
-      .send({ serialNumber: '99' });
+      .send({ serialNumber: '99', passphrase: 'secret' });
     expect(res.status).toBe(404);
   });
 
@@ -325,25 +326,38 @@ describe('certRouter', () => {
     expect(logger.error).toHaveBeenCalled();
   });
 
-  test('get /crl.pem returns PEM data when passphrase provided', async() => {
+  test('get /crl.pem returns published PEM data', async() => {
     controller.getCRLPem.mockResolvedValue('PEM DATA');
-    const res = await request(app).get('/crl.pem').set('x-ca-passphrase', 'secret');
+    const res = await request(app).get('/crl.pem');
     expect(res.status).toBe(200);
     expect(res.text).toBe('PEM DATA');
     expect(res.headers['content-type']).toContain('application/pkix-crl');
-    expect(controller.getCRLPem).toHaveBeenCalledWith('secret');
+    expect(controller.getCRLPem).toHaveBeenCalled();
   });
 
-  test('get /crl.pem rejects missing passphrase', async() => {
+  test('configured CRL publication path returns published PEM data', async() => {
+    controller.getCRLPem.mockResolvedValue('PEM DATA');
+    const res = await request(app).get('/crl/root-ca.crl.pem');
+    expect(res.status).toBe(200);
+    expect(res.text).toBe('PEM DATA');
+    expect(res.headers['content-type']).toContain('application/pkix-crl');
+  });
+
+  test('get /crl.pem returns 404 when no published CRL exists', async() => {
+    controller.getCRLPem.mockImplementation(() => {
+      const err = new Error('Published CRL not found');
+      err.code = 'ENOENT';
+      throw err;
+    });
     const res = await request(app).get('/crl.pem');
-    expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'CA passphrase required' });
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Published CRL not found' });
     expect(logger.error).toHaveBeenCalled();
   });
 
   test('get /crl.pem handles errors', async() => {
     controller.getCRLPem.mockImplementation(() => { throw new Error('fail'); });
-    const res = await request(app).get('/crl.pem').set('x-ca-passphrase', 'secret');
+    const res = await request(app).get('/crl.pem');
     expect(res.status).toBe(400);
     expect(logger.error).toHaveBeenCalled();
   });

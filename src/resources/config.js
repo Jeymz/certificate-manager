@@ -104,6 +104,52 @@ class Config {
   }
 
   /**
+   * Retrieve revocation publication settings.
+   *
+   * @returns {{enabled:boolean, issuers:Object<string, {publicUrl:string, relativePath:string}>}}
+   * Revocation publication configuration.
+   */
+  getRevocationPublishing() {
+    const revocationPublishing = this.#private.configuration.revocationPublishing || {};
+    return {
+      enabled: revocationPublishing.enabled === true,
+      issuers: JSON.parse(JSON.stringify(revocationPublishing.issuers || {})),
+    };
+  }
+
+  /**
+   * Retrieve revocation publication settings for a named issuer key.
+   *
+   * @param {string} issuerKey - Logical issuer key such as `root` or `defaultIntermediate`.
+   * @returns {{publicUrl:string, relativePath:string}|null} Issuer publication settings or null.
+   */
+  getRevocationIssuerConfig(issuerKey) {
+    const revocationPublishing = this.getRevocationPublishing();
+    if (!issuerKey || !revocationPublishing.issuers[issuerKey]) {
+      return null;
+    }
+    return JSON.parse(JSON.stringify(revocationPublishing.issuers[issuerKey]));
+  }
+
+  /**
+   * Determine which issuer profile is currently active for CRL publication.
+   *
+   * @returns {"root"|"defaultIntermediate"} Active issuer configuration key.
+   */
+  getActiveRevocationIssuerKey() {
+    return this.#private.defaultIntermediate ? 'defaultIntermediate' : 'root';
+  }
+
+  /**
+   * Retrieve publication settings for the currently active issuer.
+   *
+   * @returns {{publicUrl:string, relativePath:string}|null} Active issuer publication settings.
+   */
+  getActiveRevocationIssuerConfig() {
+    return this.getRevocationIssuerConfig(this.getActiveRevocationIssuerKey());
+  }
+
+  /**
    * Retrieve configured X.509 extension profiles.
    *
    * @returns {Object.<string,Array>} Mapping of extension sets by name.

@@ -32,12 +32,20 @@ async function ensureFile(filePath, defaultContents) {
 async function validateStore(storeDirectory) {
   const created = [];
   const intDir = path.join(storeDirectory, 'intermediates');
+  const crlDir = path.join(storeDirectory, 'crl');
   try {
     await fs.access(intDir);
   } catch {
     await fs.mkdir(intDir, { recursive: true });
     logger.info('Created missing store directory: intermediates');
     created.push('intermediates');
+  }
+  try {
+    await fs.access(crlDir);
+  } catch {
+    await fs.mkdir(crlDir, { recursive: true });
+    logger.info('Created missing store directory: crl');
+    created.push('crl');
   }
 
   if (await ensureFile(path.join(storeDirectory, 'serial'), '1000000')) {
